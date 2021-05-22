@@ -1,2 +1,2 @@
-# LAMP-Stack
-LAMP Stack implementation in AWS  
+# Darey.io projects
+DevOps PBL submissions  

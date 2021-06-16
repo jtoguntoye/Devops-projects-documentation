@@ -41,4 +41,15 @@ sudo npm install express mongoose
 ## Step 4 -Accessing the routes with AngularJs
 - Created a ```public``` directory in the ```Books``` directory  and added a file named ```script.js``` in it 
 - Also added the ```index.html``` file to the ```public``` directory with the required file content
+- Next, I started the server by running 
+ ```
+ node server.js
+ ```
+ -To be able to access the server from the browser, I added a new inbound rule to the security group to allow TCP port 3300.
+ 
+ The final result of accessing the server and adding new books is shown below:
+ 
+ <img width="960" alt="result_page" src="https://user-images.githubusercontent.com/23315232/122253516-25eaf880-cec4-11eb-8565-802a20100050.png">
+
+
 

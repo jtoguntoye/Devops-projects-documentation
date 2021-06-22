@@ -38,9 +38,6 @@ Launch two AWS EC2 instances named `mysql-server` and `mysql-client`
  GRANT ALL PRIVILEGES ON devops_mentors_db.* TO 'james'@'%' WITH GRANT OPTIONS;
  ```
  
- - To show database:
- ```SHOW DATABASE;
- ```
  
  <img width="219" alt="show_database" src="https://user-images.githubusercontent.com/23315232/122946421-40641c80-d371-11eb-9aaa-58cad4a193b8.png">
  
@@ -72,6 +69,12 @@ sudo systemctl restart mysql
  ```
  mysql -u james -h 172.31.25.8 -p
  ```
+
+ - To show database:
+ ```SHOW DATABASE;
+ ```
  
+ <img width="413" alt="show_db_client" src="https://user-images.githubusercontent.com/23315232/122953057-54f6e380-d376-11eb-976b-3d02b3dcc211.png">
+
 
 

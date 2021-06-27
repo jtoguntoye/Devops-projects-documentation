@@ -72,7 +72,7 @@ sudo mount /dev/webdata-vg/logs-lv /var/log
 sudo rsync -av /home/recovery/logs/ /var/log
 ```
 - To persist the mount configuration, add the UUID of the devices to the /etc/fstab file. The UUID (Universal Unique Identifiers) for the devices can 
-be gotten using the command `blkid` 
+be gotten using the command `blkid`. The /etc/fstab file is shown below:
 
 <img width="589" alt="adding_mount_point_to_fstab_config_file" src="https://user-images.githubusercontent.com/23315232/123534110-8bd04f00-d712-11eb-8ec4-e7a600759f91.png">
 
@@ -118,7 +118,77 @@ sudo systemctl enable php-fpm
 setsebool -P httpd_execmem 1
 ```
 
-- 
+- Restart Apache 
+```
+sudo systemctl restarst httpd
+```
+- Next, download wordpress and copy it to /var/www/html directory
+```
+mkdir wordpress
+cd   wordpress
+sudo wget http://wordpress.org/latest.tar.gz
+sudo tar xzvf latest.tar.gz
+sudo rm -rf latest.tar.gz
+cp wordpress/wp-config-sample.php wordpress/wp-config.php
+cp -R wordpress /var/www/html/
+```
+- Configure SELinux (Security Enhanced Linux) policies
+```
+sudo chown -R apache:apache /var/www/html/wordpress
+sudo chcon -t httpd_sys_rw_content_t /var/www/html/wordpress -R
+ sudo setsebool -P httpd_can_network_connect=1
+```
  
- 
+ ## Step 4- Install MySQL on the DB server EC2
+ ```
+ sudo yum update
+ sudo yum install mysql-server
+```
+- Start the mysql service
+```
+sudo systemctl restart mysqld
+sudo systemctk enable mysqld
+```
+The Status of the mysql service is shown below:
 
+<img width="679" alt="db_server_mysqld_status" src="https://user-images.githubusercontent.com/23315232/123552765-8523f500-d76f-11eb-88a9-e66ce336924e.png">
+
+## Step 5 - Configure DB to work with Wordpress
+- create 'wordpress' database in mysql, create a new user identified as connecting from the webserver's private IP address with a password, grant the create user all privileges on the wordpress db
+```
+sudo mysql
+CREATE DATABASE wordpress;
+CREATE USER `myuser`@`<Web-Server-Private-IP-Address>` IDENTIFIED BY 'mypass';
+GRANT ALL ON wordpress.* TO 'myuser'@'<Web-Server-Private-IP-Address>';
+FLUSH PRIVILEGES;
+SHOW DATABASES;
+exit
+```
+The created db is shown below:
+
+<img width="609" alt="db_server_lv_creation" src="https://user-images.githubusercontent.com/23315232/123552932-84d82980-d770-11eb-823a-1c71d39ca04e.png">
+
+## Step 6 Configure Wordpress to connect with remote database
+On AWS, open MYSQL port 3306 on DB server EC2 instance
+
+<img width="788" alt="db-server-inbounr_rule" src="https://user-images.githubusercontent.com/23315232/123553138-67578f80-d771-11eb-971f-f03a69d21cdf.png">
+- Install mysql-client on the web server, and update SELinux config to allow the web server to use a remote database
+```
+sudo yum install mysql
+sudo setsebool -P httpd_can_network_connect_db on
+sudo mysql -u myuser -p -h <DB-server-private-IP-address>
+```
+- Update the wp-config.php file  to allow the web server connect to the remote db
+
+<img width="447" alt="wp-config php file" src="https://user-images.githubusercontent.com/23315232/123553647-58bea780-d774-11eb-997f-b6a4a822c324.png">
+
+The databases shown by connecting to the remote db server:
+
+<img width="507" alt="remote_login_into_dbserver_from_web_server" src="https://user-images.githubusercontent.com/23315232/123553695-bc48d500-d774-11eb-8117-ba7361033ea8.png">
+
+- Open TCP port 80 on the web server
+
+-Access wordpress from a browser using the public address of the web server
+`http://<Web-Server-Public-IP-Address>/wordpress/`
+
+<img width="945" alt="wordpress_installed" src="https://user-images.githubusercontent.com/23315232/123553782-282b3d80-d775-11eb-946d-4fab6b0a3257.png">

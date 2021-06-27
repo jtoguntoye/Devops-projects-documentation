@@ -166,7 +166,7 @@ exit
 ```
 The created db is shown below:
 
-<img width="609" alt="db_server_lv_creation" src="https://user-images.githubusercontent.com/23315232/123552932-84d82980-d770-11eb-823a-1c71d39ca04e.png">
+<img width="462" alt="configuring_db_to_work_with_wordpress" src="https://user-images.githubusercontent.com/23315232/123554020-126a4800-d776-11eb-89d5-483c89615da0.png">
 
 ## Step 6 Configure Wordpress to connect with remote database
 On AWS, open MYSQL port 3306 on DB server EC2 instance

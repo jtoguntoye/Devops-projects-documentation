@@ -172,11 +172,12 @@ The created db is shown below:
 On AWS, open MYSQL port 3306 on DB server EC2 instance
 
 <img width="788" alt="db-server-inbounr_rule" src="https://user-images.githubusercontent.com/23315232/123553138-67578f80-d771-11eb-971f-f03a69d21cdf.png">
+
 - Install mysql-client on the web server, and update SELinux config to allow the web server to use a remote database
 ```
 sudo yum install mysql
 sudo setsebool -P httpd_can_network_connect_db on
-sudo mysql -u myuser -p -h <DB-server-private-IP-address>
+sudo mysql -u myuser -p -h DB-server-private-IP-address 
 ```
 - Update the wp-config.php file  to allow the web server connect to the remote db
 

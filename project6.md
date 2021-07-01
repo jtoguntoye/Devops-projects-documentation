@@ -56,7 +56,8 @@ sudo mkdir -p /var/www/html
 sudo mkdir -p /home/recovery/logs
 ```
 - Mount apps-lv logical volume at /var/www/html
-```sudo mount /dev/webdata-vg/apps-lv /var/www/html
+```
+sudo mount /dev/webdata-vg/apps-lv /var/www/html
 ```
 - Backup the contents of the /var/log directory in /home/recovery/logs directory
 ```

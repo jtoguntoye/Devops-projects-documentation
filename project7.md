@@ -61,7 +61,7 @@ sudo systemctl restart nfs-server.service
 
 ### Configure the Database server
 - Spin up an EC2 instance of type Ubuntu 20.04 for the database server
-- Install MySQL server :
+- Install MySQL server
 ```
 sudo apt install mysql-server -y
 ```
@@ -82,7 +82,7 @@ FLUSH PRIVILEGES;
 
 ### Configure web servers
 -Spin up 3 EC2 instances of type Red Hat Linux 8 for the web servers. The 3 web servers will have the same subnet CIDR.
--Install NFS client
+- Install NFS client:
 ```
 sudo yum install nfs-utils nfs4-acl-tools -y
 ```
@@ -109,3 +109,69 @@ sudo systemctl status httpd
 - Once installed on the web server the Apache files and directories also become available on the NFS server.
 
 <img width="295" alt="sync_between_web_Servers_and_nfs_Server" src="https://user-images.githubusercontent.com/23315232/124483107-e0726a80-dda1-11eb-9f67-c91c0692cba3.png">
+- Next mount the NFS export for logs `lv-logs` on the `/var/logs` directory of the web server.
+
+<img width="446" alt="mount_nfs_exported_log_on_web_Server's_httpd_log_directory" src="https://user-images.githubusercontent.com/23315232/124494878-474a5080-ddaf-11eb-947e-36e3ba91b92a.png">
+
+- Install git and clone the tooling source code at https://github.com/darey-io/tooling.git
+```
+sudo yum install git -y
+git clone https://github.com/darey-io/tooling.git
+```
+- Next, the tooling repository code is deployed to /var/www/html folder
+
+<img width="858" alt="copying_git_clone_html_folder_to_var_html1" src="https://user-images.githubusercontent.com/23315232/124495348-eb33fc00-ddaf-11eb-8a99-0f9fd596b823.png">
+
+<img width="476" alt="accessing_web_server" src="https://user-images.githubusercontent.com/23315232/124496855-e5d7b100-ddb1-11eb-9702-45ded503302e.png">
+
+
+
+- Install php on the web server.
+```
+sudo yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+sudo yum install yum-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+sudo yum module list php
+sudo yum module reset php
+sudo yum module enable php:remi-7.4
+sudo yum install php php-opcache php-gd php-curl php-mysqlnd
+sudo systemctl start php-fpm
+sudo systemctl enable php-fpm
+setsebool -P httpd_execmem 1
+```
+- Restart httpd service
+```
+sudo systemctl restart httpd
+```
+- Update the functions.php file to be able to connect to the remote database (by updating the IP address, username, password and database name), and apply the tooling-db.sql script to the database
+
+<img width="634" alt="functions php file" src="https://user-images.githubusercontent.com/23315232/124500233-4a493f00-ddb7-11eb-9c00-31b88185cd76.png">
+
+```
+sudo mysql -u myaccess -h <private-ip-address-of-db-server> -p < tooling-db.sql
+```
+
+- On the DB server, add a new user named  to the user table of the tooling database
+```
+INSERT INTO `users` (
+    `id`,
+    `username`,
+    `password`,
+    `email`,
+    `user_type`,
+    `status`
+  )
+VALUES (
+    2,
+    'myuser',
+    'PASS',
+    'user@mail.com',
+    'admin',
+    '1'
+  );
+```
+- On the web server the tooling website login page is accesible at the web server's public IP address 
+
+<img width="697" alt="login_php" src="https://user-images.githubusercontent.com/23315232/124501376-533b1000-ddb9-11eb-987c-4e51f8f5f956.png">
+
+- Log in with the created username and password
+<img width="925" alt="propitix_home_tooling_website" src="https://user-images.githubusercontent.com/23315232/124501424-6d74ee00-ddb9-11eb-8d7a-76769710fc71.png">

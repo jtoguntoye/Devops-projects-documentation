@@ -58,3 +58,54 @@ sudo systemctl restart nfs-server.service
 - Check which ports are being used by NFS server using the command ``` sudo rpcinfo -p | grep nfs```. Also in order for NFS server to be accessible from the client, open the following ports on the NFS server: TCP 111, UDP 111, UDP 2049
 
 <img width="772" alt="nfs_server_inbound_rules_update" src="https://user-images.githubusercontent.com/23315232/124401359-f68c1680-dd20-11eb-8132-0ef8c319add9.png">
+
+### Configure the Database server
+- Spin up an EC2 instance of type Ubuntu 20.04 for the database server
+- Install MySQL server :
+```
+sudo apt install mysql-server -y
+```
+```
+sudo apt install mysql_secure_installation
+```
+- Log in to MYSQL and create a database named `tooling`
+- Next create a new user named `webaccess` and grant permissions to the user on the tooling db only from the web server's subnet CIDR
+```
+sudo mysql
+CREATE DATABASE tooling;
+CREATE USER `webaccess`@`<Web-Server-SUBNET-CIDR>` IDENTIFIED BY 'password';
+GRANT ALL ON wordpress.* TO 'webaccess'@'<Web-Server-SUBNET-CIDR>';
+FLUSH PRIVILEGES;
+```
+
+<img width="219" alt="db_server_user_table" src="https://user-images.githubusercontent.com/23315232/124463984-89619b00-dd8b-11eb-81b5-92f5b74923ff.png">
+
+### Configure web servers
+-Spin up 3 EC2 instances of type Red Hat Linux 8 for the web servers. The 3 web servers will have the same subnet CIDR.
+-Install NFS client
+```
+sudo yum install nfs-utils nfs4-acl-tools -y
+```
+- Create `var/www/` directory and mount the lv-apps logical volume exported from the NFS server on the directory
+```
+sudo mkdir /var/www
+sudo mount -t nfs -o rw,nosuid <NFS-Server-Private-IP-Address>:/mnt/apps /var/www
+```
+- Persist the changes to the web server to make the mounts available after reboot by adding the NFS lv to the /etc/fstab file
+``` <NFS-Server-Private-IP-Address>:/mnt/apps /var/www nfs defaults 0 0 ```
+
+- The mount on the web server is shown using `df -h` below:
+
+<img width="399" alt="mounting_exported_folder_on_web_server" src="https://user-images.githubusercontent.com/23315232/124468813-7eaa0480-dd91-11eb-9cb1-27d8a8b28834.png">
+
+- Install Apache on the web servers
+```
+sudo yum install httpd -y
+sudo systemctl start httpd
+sudo systemctl enable httpd
+sudo systemctl status httpd
+``` 
+
+- Once installed on the web server the Apache files and directories also become available on the NFS server.
+
+<img width="295" alt="sync_between_web_Servers_and_nfs_Server" src="https://user-images.githubusercontent.com/23315232/124483107-e0726a80-dda1-11eb-9f67-c91c0692cba3.png">

@@ -2,6 +2,12 @@
 
 ## Task- Deploy and configure an Apache load balancer for Tooling website (deployed in project 7) on a separate Ubuntu EC2 instance
 
+## Architecture
+
+<img width="337" alt="architecture_for_project" src="https://user-images.githubusercontent.com/23315232/125077318-de1d5280-e0b8-11eb-9a5c-bde561491b70.png">
+          Source: Darey.io
+
+
 
 ## Prerequisite configuration
 - From setup in project 7:

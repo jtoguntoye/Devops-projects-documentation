@@ -6,7 +6,7 @@ Configure a job to automatically deploy source code changes of Tooling website (
 ## Updated Architecture
 
 <img width="637" alt="project_architecture" src="https://user-images.githubusercontent.com/23315232/125121478-e80c7900-e0eb-11eb-88b2-ce88a8922fca.png">
-Source: Darey.io
+                         Source: Darey.io
 
 ## Install and configure Jenkins server
 - Launch an AWS EC2 instance on Ubuntu 20.04 LTS and name it "Jenkins"

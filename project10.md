@@ -87,9 +87,9 @@ sudo certbot --nginx
   ```
   crontab -e
   ```
-  -Add the following line to the crontab file to run the renew command twice a day
+  -e.g Adding the following line to the crontab file will run the renew command 8:00am everyday
   ```
-  * */12 * * *   root /usr/bin/certbot renew > /dev/null 2>&1
+  * 8 * * *   root /usr/bin/certbot renew > /dev/null 2>&1
   ```
   
 - Secure access to tooling website:

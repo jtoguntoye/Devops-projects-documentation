@@ -1,6 +1,6 @@
 # Load Balancer Solution with NGINX and SSL/TLS 
 
-## Task: Configure an Nginx load balancer for Tooling website and ensuring connections to the web solution is secured using SSL/TLS certificate
+## Task: Configure an Nginx load balancer for Tooling website and ensure connections to the web solution is secured using SSL/TLS certificate
 
 Architecture:
 

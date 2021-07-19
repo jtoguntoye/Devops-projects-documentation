@@ -27,13 +27,15 @@ sudo apt install ansible
    <img width="867" alt="setting_up_ansible_freestyle_project_on_jenkins_server_to_connect_to_github_repo" src="https://user-images.githubusercontent.com/23315232/126188863-e6d22533-1a9b-4bf4-8e86-7345b283a453.png">
    
      - configure a post-build action to save all `**`  files i.e archive the build
-     - Test setup by making changes to the readMe file in the `ansible-config-mgt` repo and commit the changes. This will trigger a build and archive the build files in the     default location  ```/var/lib/jenkins/jobs/ansible/builds/<build_number>/archive/```
+     - Test setup by making changes to the readMe file in the `ansible-config-mgt` repo and commit the changes. This will trigger a build and archive the build files in the     default location 
+  ```/var/lib/jenkins/jobs/ansible/builds/<build_number>/archive/```
     
     <img width="529" alt="readme_md_file_archived_from_first_post_build_action" src="https://user-images.githubusercontent.com/23315232/126190569-2c8de10f-aaf3-42b6-884d-754a221fd97e.png">
     
 - The architecture after setting up jenkins and Ansible on a bastion server is shown below:
 
 <img width="599" alt="architecture_after_setting_up_ansible_and_jekins" src="https://user-images.githubusercontent.com/23315232/126190784-9c33d8b6-986b-4060-a480-e568aee47072.png">
+source: https://darey.io
 
 -Assign an Elastic Ip to the Jenkins server to avoid having to reconfigure github webhook everytime you restart the Jenkins server.
 

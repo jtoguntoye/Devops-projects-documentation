@@ -96,6 +96,7 @@ source: https://darey.io
 
 <img width="650" alt="post_build_action_jenkins_Archives_playbook_and_inventory_in_jenkins_Server" src="https://user-images.githubusercontent.com/23315232/126198496-9d62ebe6-096e-42c4-b74c-cd6241f92768.png">
 
+
 ## Run first Ansible test
 - Execute the common.yml playbook 
 ```
@@ -114,5 +115,7 @@ Wireshark vesion installed on ubuntu hosts:
 
 <img width="329" alt="wireshark_version_installed_on_ubuntu_hosts" src="https://user-images.githubusercontent.com/23315232/126202008-1a48c0f0-c592-499b-9d23-ec20a6b15e23.png">
 
-```
-```
+Updated Architecture:
+
+<img width="483" alt="final_Architecture" src="https://user-images.githubusercontent.com/23315232/126203140-bc329a1b-7a1b-42be-ae90-7d9ca7282317.png">
+

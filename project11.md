@@ -88,4 +88,29 @@ sudo apt install ansible
 
 <img width="894" alt="creating_pull_request_to_merge_feature_into_master_branch" src="https://user-images.githubusercontent.com/23315232/126197663-ec819881-b8ff-4b33-a1ce-9ca250b99ab0.png">
 
-- Once mergeed into master branch, 
+- Once mergeed into master branch, the github webhook triggers a build in Jenkins and archives the build files
+
+<img width="746" alt="jenkins_build_after_merging_feature_branch_into_master_branch" src="https://user-images.githubusercontent.com/23315232/126198464-3b6e96b2-826b-4478-bef0-0710ae1368ec.png">
+
+<img width="650" alt="post_build_action_jenkins_Archives_playbook_and_inventory_in_jenkins_Server" src="https://user-images.githubusercontent.com/23315232/126198496-9d62ebe6-096e-42c4-b74c-cd6241f92768.png">
+
+## Run first Ansible test
+- Execute the common.yml playbook 
+```
+ansible-playbook -i /var/lib/jenkins/jobs/ansible/builds/<build-number>/archive/inventory/dev.yml /var/lib/jenkins/jobs/ansible/builds/<build-number>/archive/playbooks/common.yml
+```
+
+<img width="670" alt="result_of_running_ansible_playbook" src="https://user-images.githubusercontent.com/23315232/126201930-b3c14854-42b8-41bf-ae52-7a76f7d3cc38.png">
+
+- Wireshark utility is  now installed on the target servers
+
+Wireshark version installed on redhat hosts:
+
+<img width="350" alt="wireshark_version_installed_on_ec2-hosts" src="https://user-images.githubusercontent.com/23315232/126201987-9a253c7a-ef64-4587-bab6-d3f2cf5f5106.png">
+
+Wireshark vesion installed on ubuntu hosts:
+
+<img width="329" alt="wireshark_version_installed_on_ubuntu_hosts" src="https://user-images.githubusercontent.com/23315232/126202008-1a48c0f0-c592-499b-9d23-ec20a6b15e23.png">
+
+```
+```

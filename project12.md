@@ -209,8 +209,8 @@ sudo ansible-playbook -i /home/ubuntu/ansible-config-artifact/inventory/dev.yml 
  
  <img width="953" alt="reaching_uat_webservers_with_public_dns" src="https://user-images.githubusercontent.com/23315232/126729036-41e5c5fc-4b9c-4d72-a882-caf08b587439.png">
  
- <img width="854" alt="reaching_uat2_webservers_with_public_dns" src="https://user-images.githubusercontent.com/23315232/126736775-362afbca-c166-4d22-b57c-a726aadab313.png">
 
+ <img width="887" alt="reaching_uat2_webservers_with_public_dns" src="https://user-images.githubusercontent.com/23315232/126736845-7a8e2829-4ec5-4459-8562-0a99c4f526a2.png">
  
  Final architecture:
  

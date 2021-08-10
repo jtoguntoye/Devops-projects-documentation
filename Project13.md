@@ -500,6 +500,6 @@ ubuntu@ip-172-31-10-74://home/ubuntu/ansible-config-mgt$
 ```
 
 Troubleshooting blockers:
-- While executing the project, the playbook skipped the load balancer role execution. I'm still working on this.
+- While executing the project, the playbook skipped the load balancer role execution. I'm still working on this. To learn more about configuring LB roles to resolve the blocker.
 
 <img width="815" alt="running_playbook" src="https://user-images.githubusercontent.com/23315232/128922041-321294c0-b2cd-4fd5-94ba-a4e5f10a0815.png">

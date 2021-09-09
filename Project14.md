@@ -172,3 +172,55 @@ Quick task:
 ### Run Ansible playbooks from Jenkins
 - Install Ansible on Jenkins
 - Install Ansible plugin in Jenkins UI
+- Create jenkinsFile from scratch. 
+ #### NOTES: 
+      - Ensure that the git module in `Jenkinsfile` is checking out SCM to `main` branch instead of `master`. (GitHub has discontinued the use of `Master` due to Black           Lives Matter)
+      - Jenkins needs to export the ANSIBLE_CONFIG environment variable. You can put the .ansible.cfg file alongside Jenkinsfile in the deploy directory. This way, anyone         can easily identify that everything in there relates to deployment. Then, using the Pipeline Syntax tool in Ansible, generate the syntax to create environment             variables to set
+      - Ensure that you start the Jenkinsfile with a clean up step to always delete the previous workspace before running a new one. This ensures that Jenkins downloads           the latest code from Github
+      
+```
+pipeline {
+    agent any
+
+     options {
+        // This is required if you want to clean before build
+        skipDefaultCheckout(true)
+    }
+    environment {
+      ANSIBLE_CONFIG="${WORKSPACE}/deploy/ansible.cfg"
+    }
+    stages {
+         stage("Initial cleanup") {
+          steps {
+            // Clean before build
+                cleanWs()
+          }
+        }
+        stage ('SCM checkout') {
+          steps {
+            git(branch: 'master', url: 'https://github.com/jtoguntoye/ansible-config-mgt')
+            }
+        }
+        stage ('Exexcute playbook') {
+            steps {
+                ansiblePlaybook credentialsId: 'latest-key', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory/dev', playbook: 'playbooks/site.yml'
+            }
+        }
+
+        stage('Clean Workspace after build'){
+           steps{
+           cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
+           }
+       }
+    }
+}
+```
+
+
+<img width="682" alt="console_output_after_running_ansible_playbook_from_jenkins" src="https://user-images.githubusercontent.com/23315232/132630664-4f3df1ea-bda0-4db8-ae84-8b4c15f97a0d.png">
+
+### Parameterizing Jenkinsfile For Ansible Deployment
+- In the above JenkinsFile, we are deploying the ansible playbook to the dev environment. If we need to deploy to other environments (say pentest, sit environments), we     need to pass parameters to the jenkinFile
+
+1- Update SIT inventory with new servers
+2- Update Jenkinsfile to introduce parameterization. Below is just one parameter. It has a default value in case if no value is specified at execution. It also has a  description so that everyone is aware of its purpose.

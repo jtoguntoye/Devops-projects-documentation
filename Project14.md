@@ -357,3 +357,178 @@ sudo systemmctl restart php7.4-fpm
 http://<artifactory-server-ip>:8082/artifactory
 ```
 - Enter the Default Deployer Credentials(the username and the changed password of artifactory)
+
+<img width="716" alt="configure_Artifactory_ip_url_and_Server_credentials_in_jenkins" src="https://user-images.githubusercontent.com/23315232/132847281-f9a22b8b-6c48-421d-b659-57549c295b4c.png">
+
+## Step 2.3 Integrate Artifactory Repository with Jenkins
+- On Jenkins server, install mysql-client
+
+- Create a dummy Jenkinsfile in php-todo repo
+
+- In Blue Ocean, create multibranch php-todo pipeline(follow the previous steps earlier)
+
+- Spin up an instance for a database, install and configure mysql-server( This is where data pertaining to the artifactory repository will be stored).
+
+- Create a database and user on the database server
+
+```
+CREATE DATABASE homestead;
+CREATE USER 'homestead'@'%' IDENTIFIED BY 'sePret^i';
+GRANT ALL PRIVILEGES ON * . * TO 'homestead'@'%';
+FLUSH PRIVILEGES;
+```
+- Check if the database created on the database server can be reached from the Jenkins server. On the jenkins server, run command:
+``` mysql -u <DB_user> -h <DB-private-ip-address> -p
+```
+- Next update the `.env.sample` file in your php-todo repo to connect to the external DB
+
+<img width="588" alt="setting_artifacctory_external_db_ip_address_in_the_repos_env_file" src="https://user-images.githubusercontent.com/23315232/132848447-e84760cf-bad3-443a-817e-9e8d1dbbd701.png">
+
+- Update Jenkinsfile with proper configuration
+```
+pipeline {
+  agent any
+
+  stages {
+
+   stage("Initial cleanup") {
+        steps {
+          dir("${WORKSPACE}") {
+            deleteDir()
+          }
+        }
+      }
+
+  stage('Checkout SCM') {
+    steps {
+          git branch: 'main', url: 'https://github.com/darey-devops/php-todo.git'
+    }
+  }
+
+  stage('Prepare Dependencies') {
+    steps {
+           sh 'mv .env.sample .env'
+           sh 'composer install'
+           sh 'php artisan migrate'
+           sh 'php artisan db:seed'
+           sh 'php artisan key:generate'
+        }
+      }
+    }
+  }
+```
+- In the above jenkinsFile:
+  - Composer is used by PHP to install all the dependent libraries used by the application
+  - php artisan uses the .env file to setup the required database objects - (After successful run of this step, login to the database, run show tables and you will see the tables being created for you)
+
+<img width="894" alt="successfully_built_main_branch_for_todo_repo" src="https://user-images.githubusercontent.com/23315232/132849991-3ddea335-0b45-4843-a6ee-a702b787e61e.png">
+
+  
+  - Next, update the Jenkinsfile to include Unit tests step
+  ```
+  stage('Execute Unit Tests') {
+      steps {
+             sh './vendor/bin/phpunit'
+      } 
+  ```
+
+ ## Step 2.4 Code Quality analysis
+ - For PHP the most commonly tool used for code quality analysis is phploc
+ - The data produced by phploc can be ploted onto graphs in Jenkins.
+ -Add the code analysis step in Jenkinsfile. The output of the data will be saved in build/logs/phploc.csv file.
+ ```
+ stage ('Code analysis') {
+            steps {
+                sh 'phploc app/ --log-csv build/logs/phploc.csv'
+            }
+        }
+ ```
+ - Plot the data using plot Jenkins plugin.
+ ```
+  stage('Plot Code Coverage Report') {
+      steps {
+
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Lines of Code (LOC),Comment Lines of Code (CLOC),Non-Comment Lines of Code (NCLOC),Logical Lines of Code (LLOC)                          ', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'A - Lines of code', yaxis: 'Lines of Code'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Directories,Files,Namespaces', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'B - Structures Containers', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Average Class Length (LLOC),Average Method Length (LLOC),Average Function Length (LLOC)', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'C - Average Length', yaxis: 'Average Lines of Code'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Cyclomatic Complexity / Lines of Code,Cyclomatic Complexity / Number of Methods ', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'D - Relative Cyclomatic Complexity', yaxis: 'Cyclomatic Complexity by Structure'      
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Classes,Abstract Classes,Concrete Classes', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'E - Types of Classes', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Methods,Non-Static Methods,Static Methods,Public Methods,Non-Public Methods', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'F - Types of Methods', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Constants,Global Constants,Class Constants', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'G - Types of Constants', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Test Classes,Test Methods', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'I - Testing', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Logical Lines of Code (LLOC),Classes Length (LLOC),Functions Length (LLOC),LLOC outside functions or classes ', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'AB - Code Structure by Logical Lines of Code', yaxis: 'Logical Lines of Code'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Functions,Named Functions,Anonymous Functions', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'H - Types of Functions', yaxis: 'Count'
+            plot csvFileName: 'plot-396c4a6b-b573-41e5-85d8-73613b2ffffb.csv', csvSeries: [[displayTableFlag: false, exclusionValues: 'Interfaces,Traits,Classes,Methods,Functions,Constants', file: 'build/logs/phploc.csv', inclusionFlag: 'INCLUDE_BY_STRING', url: '']], group: 'phploc', numBuilds: '100', style: 'line', title: 'BB - Structure Objects', yaxis: 'Count'
+
+
+      }
+    }
+ ```
+ - On running, the pipeline, a new option `plot` appears on Jenkins UI from where you can view the analysis chart for the analysed code
+ ```
+ <img width="932" alt="plot_plugin_result_for_phploc_code_Analysis_stage" src="https://user-images.githubusercontent.com/23315232/132850794-2f449965-4b17-441c-9069-0440e48fae34.png">
+ 
+ -  Next, Bundle the application code for into an artifact (archived package) upload to Artifactory server
+ ``` 
+ - stage ('Package Artifact') {
+    steps {
+            sh 'zip -qr ${WORKSPACE}/php-todo.zip ${WORKSPACE}/*'
+}
+
+- Publish the resulted artifact into Artifactory
+```
+stage ('Deploy Artifact to Artifactory') {
+          steps {
+            script {
+                 def server = Artifactory.server 'artifactory-server'
+                 def uploadSpec = """{
+                    "files": [
+                      {
+                       "pattern": "php-todo.zip",
+                       "target": "joel/php-todo",
+                       "props": "type=zip;status=ready"
+                       }
+                    ]
+                 }"""
+                 server.upload spec: uploadSpec
+               }
+            }
+        }
+```
+- Deploy the application to the dev environment by launching Ansible pipeline
+
+```
+tage ('Deploy to Dev Environment') {
+    steps {
+    build job: 'ansible-project/main', parameters: [[$class: 'StringParameterValue', name: 'env', value: 'dev']], propagate: false, wait: true
+    }
+  }
+```
+Note:
+The build job used in this step tells Jenkins to start another job. In this case it is the ansible-project job, and we are targeting the main branch. Hence, we have ansible-project/main. Since the Ansible project requires parameters to be passed in, we have included this by specifying the parameters section. The name of the parameter is env and its value is dev. Meaning, deploy to the Development environment.
+
+<img width="805" alt="succesfully_deploying_artifact_to_artifactory_Server_And_then_running_ansible_job" src="https://user-images.githubusercontent.com/23315232/132851412-7aa72466-5b19-4818-a7c7-3b2d498d25f3.png">
+
+## Step 3 - Configure Sonarqube
+- To ensure only code that meets corporate customer's requirements is deployed to Artifactory, we'll set up a quality gate.
+- SonarQube is a tool that can be used to create quality gates for software projects, and the ultimate goal is to be able to ship only quality software code
+- In this project we will use predefined Quality Gates (also known as The Sonar Way). Software testers and developers would normally work with project leads and architects to create custom quality gates
+
+### Step 3.1 Install SonarQube on Ubuntu 20.04 With PostgreSQL as Backend Database
+- Tune Linux kernel
+```
+sudo sysctl -w vm.max_map_count=262144
+sudo sysctl -w fs.file-max=65536
+ulimit -n 65536
+ulimit -u 4096
+```
+- Open the /etc/security/limits.conf file and append the following.
+```
+sonarqube   -   nofile   65536
+sonarqube   -   nproc    4096
+```
+- To enable persistence after reboot, open the /etc/sysctl.conf and append the following.
+```
+vm.max_map_count=262144
+fs.file-max=65536 
+```

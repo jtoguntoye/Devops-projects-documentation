@@ -224,3 +224,136 @@ pipeline {
 
 1- Update SIT inventory with new servers
 2- Update Jenkinsfile to introduce parameterization. Below is just one parameter. It has a default value in case if no value is specified at execution. It also has a  description so that everyone is aware of its purpose.
+
+```
+pipeline {
+    agent any
+
+    parameters {
+      string(name: 'inventory', defaultValue: 'dev',  description: 'This is the inventory file for the environment to deploy configuration')
+    }
+...
+```
+
+- The entire jenkinsFile now looks like this: 
+
+```
+pipeline {
+    agent any
+
+     parameters {
+       string(name: 'inventory_file', defaultValue: '', description: 'This is the inventory file for the environment to deploy configuration')
+     }
+     options {
+        // This is required if you want to clean before build
+        skipDefaultCheckout(true)
+    }
+    environment {
+      ANSIBLE_CONFIG="${WORKSPACE}/deploy/ansible.cfg"
+    }
+    stages {
+         stage("Initial cleanup") {
+          steps {
+            // Clean before build
+                cleanWs()
+          }
+        }
+        stage ('SCM checkout') {
+          steps {
+            git(branch: 'master', url: 'https://github.com/jtoguntoye/ansible-config-mgt')
+            }
+        }
+        stage ('Exexcute playbook') {
+            steps {
+                ansiblePlaybook credentialsId: 'latest-key', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory/${inventory_file}', playbook: 'playbooks/site.yml'
+            }
+        }
+
+        stage('Clean Workspace after build'){
+           steps{
+           cleanWs(cleanWhenAborted: true, cleanWhenFailure: true, cleanWhenNotBuilt: true, cleanWhenUnstable: true, deleteDirs: true)
+           }
+       }
+    }
+}
+```
+- When you execute the pipeline now, you get prompted to enter the inventory file to be used
+
+<img width="923" alt="jenkins_requesting_inventory_parameter_for_ansible_deployment" src="https://user-images.githubusercontent.com/23315232/132812551-0a7b95af-bd2d-4abc-8a14-bb0d103b7a05.png">
+
+
+## Step 2: CI/CD Pipeline for TODO application
+- Our goal here is to deploy the application onto servers directly from Artifactory server rather than from `git`
+
+### Step 2.1 Configure Artifactory
+- Launch a new server instance to be used as artifactory server. Note: Choose an EC2 instance size above micro (use medium size)
+- Install artifactory on the server
+```
+sudo apt update
+wget https://releases.jfrog.io/artifactory/artifactory-rpms/artifactory-rpms.repo -O jfrog-artifactory-rpms.repo
+sudo mv jfrog-artifactory-rpms.repo /etc/yum.repos.d/
+sudo yum update && sudo yum install jfrog-artifactory-oss
+ln -s /etc/opt/jfrog/artifactory/ /opt/jfrog/artifactory
+```
+
+<img width="489" alt="artifactory_installed_on_Server" src="https://user-images.githubusercontent.com/23315232/132818911-47ecc340-6948-4e1a-ab20-302cf7075760.png">
+
+### Step 2.2 Prepare Jenkins
+
+- Fork the php-todo repository  below to your github account
+```
+https://github.com/darey-devops/php-todo.git
+```
+- On you Jenkins server, install PHP, its dependencies(Feel free to do this manually at first, then update your Ansible accordingly later)
+
+```
+sudo apt install -y zip libapache2-mod-php php7.4-fpm phploc php-{xml,bcmath,bz2,intl,gd,mbstring,mysql,zip,xdebug}
+```
+- Install PHP Composer manually:
+```
+   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+   
+   php -r "if (hash_file('sha384', 'composer-setup.php') === '756890a4488ce9024fc62c56153228907f1545c228516cbf63f885e036d37e9a59d27d63f46af1d4d07ee0f76181c7d3') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+   
+   php composer-setup.php
+   
+   mv composer.phar /usr/local/bin/composer
+```
+- Configure the php.ini file, you can get the path to the file by running
+
+- After getting the path to the file, enter the file and paste in:
+```
+xdebug.mode = coverage
+```
+- Install nodejs and npm
+```
+sudo apt-get update -y
+sudo apt-get install nodejs -y
+sudo apt install npm -y
+```
+- Install typescript using node package manager(npm). Only root user can install typecript.
+```
+su
+npm install -g typescript
+```
+- Restart php7.4-fpm
+```
+sudo systemmctl restart php7.4-fpm
+```
+- Next, install Tthe following plugins on Jenkins UI
+
+    - Plot plugin: to display tests reports and code coverage information
+    - Artifactory plugin: to easily deploy artifacts to Artifactory server
+
+- Go to the artifactory URL(http://artifactory-server-ip:8082) and create a local generic repository named php-todo(Default username and password is admin. After logging in, change the password)
+
+- Configure Artifactory in Jenkins UI
+- Click Manage Jenkins, click Configure System
+- Scroll down to JFrog, click Add Artifactory Server
+- Enter the Server ID
+- Enter the URL as:
+
+```
+http://<artifactory-server-ip>:8082/artifactory
+```
+- Enter the Default Deployer Credentials(the username and the changed password of artifactory)

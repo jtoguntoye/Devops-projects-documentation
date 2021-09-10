@@ -878,3 +878,6 @@ Setting up slave servers will help distribute the job workload in event of high 
 - We leave the *defaultValue* in parameters blank like this: **defaultValue: ''**
 - In the Execute Ansible Stage, we will update the *inventory* like this: inventory: **'inventory/${inventory_file}'**
 
+
+Pipeline Demo video link: https://drive.google.com/file/d/1sDSFIvD0M0DlKbp6jJvDEH48VMsbUrrM/view?usp=sharing
+

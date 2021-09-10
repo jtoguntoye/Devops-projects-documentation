@@ -807,8 +807,74 @@ cd /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQube
     }
   ```
   
-  - After running the pipeline, the output is shwown below:
+  - After running the pipeline, the output is shown below:
  
  <img width="937" alt="successfully_built_main_branch_after_adding_sonarqube_gate_for_todo_repo" src="https://user-images.githubusercontent.com/23315232/132857534-03b85b90-f780-4a9c-af0d-a0ed8ad63fd9.png">
  
-- Also on the sonarqube UI, the   
+- Also on the sonarqube UI, the result of the sonarqube quality check is shown below:
+
+ <img width="947" alt="php-todo-project-code-analysis-shown-in-sonarqube" src="https://user-images.githubusercontent.com/23315232/132858174-ca078221-0fb4-4206-a44e-bcf2f6503075.png">   
+
+### Step 3.7: Conditionally Deploy to Higher Environments
+- Depending on the release strategy adopted for a project, we can use different branches to control how releases are done
+- Assuming a basic gitflow implementation restricts only the ***develop*** branch to deploy code to Integration environment like ***sit***
+  -  We will include a **when** condition to execute the Quality Gate stage only when the running branch is `develop`, `hotfix`, `release`, `main`
+  -  Then we add a timeout step to wait for SonarQube to complete analysis and successfully finish the pipeline only when code quality is acceptable.
+  -   The updated sonarqube gate analysis stage in the jenkinsFile is shown below:
+ 
+ ```
+  stage('SonarQube Quality Gate') {
+      when { branch pattern: "^develop*|^hotfix*|^release*|^main*", comparator: "REGEXP"}
+        environment {
+            scannerHome = tool 'SonarQubeScanner'
+        }
+        steps {
+            withSonarQubeEnv('sonarqube') {
+                sh "${scannerHome}/bin/sonar-scanner -Dproject.settings=sonar-project.properties"
+            }
+            timeout(time: 1, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: true
+            }
+        }
+    }
+  ```
+  
+  - To test, create different branches and push to GitHub. You will realise that only branches other than develop, hotfix, release, main, or master will be able to deploy the code.
+  
+  - Below is the pipeline build for **main** branch
+  
+  <img width="923" alt="project_not_Deployed_to_dev_environment_because_quality_Gate_did_not_pass" src="https://user-images.githubusercontent.com/23315232/132859193-0b180e86-2d8a-4384-a44a-d595241870f0.png">
+  
+  - Below is the pipeline build for  a newlyl create **new-feature** branch which does not pass through a quality gate
+  
+  <img width="947" alt="new-feature-branch-is-deployed-to-dev-environment-since-it-is-not-covered-in-quality-gate" src="https://user-images.githubusercontent.com/23315232/132859367-d43728b7-49f2-46d5-bea5-186dfcb0bc58.png">
+  
+## Step 4: Configure Jenkins slave servers
+Setting up slave servers will help distribute the job workload in event of high wowrkloads. The Jenkins slave will execute jobs dispatched to it by the master server
+- Spin up a new EC2 Instance
+  - Install all the neccessary software packages just like you did with the master(bastion) server including configuring sonar-scanner.properties file
+  
+- On the main Jenkins server
+  - Navigate to Manage Jenkins > Manage Nodes
+  - Click New Node
+  - Enter name of the node and click the 'Permanent Agent' button and click the OK button
+  - Fill in the remote root directory as /home/ubuntu
+  - Set 'Host' value as the Public-IP of the slave node
+  - For Launch Method, select Launch Agents via SSH
+  - Add SSH with username and private key credentials with username as ubuntu and private key as the private key of the master node
+  - For Host Key Verification Strategy, select Manually trusted key validation strategy
+  - Click Save
+  
+  <img width="957" alt="setting_up_jenkins_slave_node_on_master" src="https://user-images.githubusercontent.com/23315232/132859845-8ac87473-e6e6-4ee3-a000-eac418237a85.png">
+  
+  ## Step 5: Configure GitHub WebHook for Automatic Build of Pushed Code
+    
+ To automatically run the pipeline when there is a code push, we will configure github webhook
+ 
+ <img width="938" alt="github_webhook_for_php-todo-repo" src="https://user-images.githubusercontent.com/23315232/132860270-97f67791-288f-42f2-9c69-38b2c7158aed.png">
+ 
+ ## Step 6: Deploy to all Environments
+ To deploy to all environemnts, we will configure the jenkinsfile in the config-mgt-ansible folder in two key places.
+- We leave the *defaultValue* in parameters blank like this: **defaultValue: ''**
+- In the Execute Ansible Stage, we will update the *inventory* like this: inventory: **'inventory/${inventory_file}'**
+

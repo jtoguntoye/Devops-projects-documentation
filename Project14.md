@@ -532,3 +532,283 @@ sonarqube   -   nproc    4096
 vm.max_map_count=262144
 fs.file-max=65536 
 ```
+### Step 3.2: Update system packages and Install Java(sonarqube is java-based) and other required packages
+` Update and upgrade packages
+```
+sudo apt-get update -y
+sudo apt-get upgrade -y
+```
+- Install wget and unzip packages
+```
+sudo apt-get install wget unzip -y
+```
+- Install OpenJDK and Java Runtime Environment (JRE)
+```
+sudo apt-get install openjdk-11-jdk -y
+sudo apt-get install openjdk-11-jre -y
+```
+- To set default JDK or switch to OpenJDK, run the command,
+```sudo update-alternatives --config java```
+
+- Verify JAVA is installed by running:
+```java -version```
+### Step 3.3: Install and Setup PostgreSQL 10 Database for SonarQube
+- Go to the security group and open port 5432 for postgreSQL on Sonarqube Instance
+
+- Add PostgreSQL to repo list
+```
+sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
+```
+- Download PostgreSQL software
+```
+wget -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O - | sudo apt-key add -
+```
+- Install PostgreSQL
+```
+sudo apt-get -y install postgresql postgresql-contrib
+```
+- Start and enable PostgreSQL Database service
+```
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+- Change the default password for postgres user (to any password you can easily remember)
+```sudo passwd postgres```
+- Then switch to postgres user
+```su - postgres```
+
+- Create a new user for SonarQube
+
+``createuser sonar``
+-  Create Sonar DB and user
+
+  - Switch to PostgreSQL shell
+  ``psql```
+  - Set up encrypted password for newly created user
+  ```ALTER USER sonar WITH ENCRYPTED password 'sonar';```
+  - Create a DB for SonarQube
+  ```CREATE DATABASE sonarqube OWNER sonar;```
+  - Grant required privileges
+  ```grant all privileges on DATABASE sonarqube to sonar;```
+  `Exit the shell
+```\q```
+- Switch back to initial user
+  ```exit```
+  
+  ### Step 3.4: Install and configure SonarQube
+- Download temporary files to /tmp folder
+  ```
+  cd /tmp && sudo wget https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-7.9.3.zip
+  ```
+- Unzip archive to the /opt directory and move to /opt/sonarqube
+  ```
+  sudo unzip sonarqube-7.9.3.zip -d /opt
+  sudo mv /opt/sonarqube-7.9.3 /opt/sonarqube
+  ```
+    
+   
+- Configure SonarQube
+Since Sonarqube cannot be run as root user, we have to create a **sonar** user to start the service with.
+  - Create a group sonar
+    ```
+    sudo groupadd sonar
+    ```
+  - Add a **sonar** user with control over /opt/sonarqube
+    ```
+    sudo useradd -c "user to run SonarQube" -d /opt/sonarqube -g sonar sonar 
+    sudo chown sonar:sonar /opt/sonarqube -R
+    ```
+  - Open and edit SonarQube configuration file
+    
+    ```
+    sudo vim /opt/sonarqube/conf/sonar.properties
+    ```
+    
+    Then find and edit the following lines
+  
+    ```
+    sonar.jdbc.username=sonar
+    sonar.jdbc.password=sonar
+    ```
+    Append this line
+    ```
+    sonar.jdbc.url=jdbc:postgresql://localhost:5432/sonarqube
+    ```
+    
+    - Enter the sonar script file. Find and set RUN_AS_USER to be equals to sonar
+    
+    ```
+    sudo nano /opt/sonarqube/bin/linux-x86-64/sonar.sh
+    ```
+    ```
+    # If specified, the Wrapper will be run as the specified user.
+
+    # IMPORTANT - Make sure that the user has the required privileges to write
+
+    #  the PID file and wrapper.log files.  Failure to be able to write the log
+
+    #  file will cause the Wrapper to exit without any way to write out an error
+
+    #  message.
+
+    # NOTE - This will set the user which is used to run the Wrapper as well as
+
+    #  the JVM and is not useful in situations where a privileged resource or
+
+    #  port needs to be allocated prior to the user being changed.
+
+     RUN_AS_USER=sonar
+    ```
+   
+   - Add sonar user to sudoers file
+    - First set the user's password to something you can easily remember
+      ```
+      sudo passwd sonar
+      ```
+    - Then run the command to add sonar to sudo group
+      ```
+      sudo usermod -a -G sudo sonar
+      ```
+    - To check if it has been added, run command
+    ```
+    groups sonar
+    ```
+    
+  - Switch to the sonar user, switch to script directory and start the script
+    ```
+    su - sonar
+    cd /opt/sonarqube/bin/linux-x86-64/
+    ./sonar.sh start
+    ```
+    Output:
+    ```
+    Starting SonarQube...
+
+    Started SonarQube
+    ```
+  - Check SonarQube logs
+    ```
+    tail /opt/sonarqube/logs/sonar.log
+    ```
+    
+    <img width="856" alt="output_of_sonarqube_logs" src="https://user-images.githubusercontent.com/23315232/132855459-5f71fe85-5303-4337-82a0-508d31166369.png">
+
+- Configure systemd to manage SonarQube service
+    - Stop the sonar service
+      ```
+      cd /opt/sonarqube/bin/linux-x86-64/
+      ./sonar.sh stop
+      ```
+    - Create systemd service file
+      ```
+      sudo vim /etc/systemd/system/sonar.service
+      ```
+      Paste in the following lines:
+      ```
+      [Unit]
+      Description=SonarQube service
+      After=syslog.target network.target
+
+      [Service]
+      Type=forking
+
+      ExecStart=/opt/sonarqube/bin/linux-x86-64/sonar.sh start
+      ExecStop=/opt/sonarqube/bin/linux-x86-64/sonar.sh stop
+
+      User=sonar
+      Group=sonar
+      Restart=always
+
+      LimitNOFILE=65536
+      LimitNPROC=4096
+
+      [Install]
+      WantedBy=multi-user.target
+      ```
+       Save and exit
+    - Use systemd to manage the service
+      ```
+      sudo systemctl start sonar
+      sudo systemctl enable sonar
+      sudo systemctl status sonar
+      ```
+      
+      <img width="939" alt="sonar_service_running_After_creating_systemd_file" src="https://user-images.githubusercontent.com/23315232/132854698-0f142b87-5850-48b2-80e6-1420db0c9ad2.png">
+      
+### Step 3.5: Access Sonarqube
+- Access the SonarQube by going to http://sonarqube-public-ip-address:9000, use **admin** as your username and password
+
+<img width="933" alt="login_to_sonarqube_Server" src="https://user-images.githubusercontent.com/23315232/132855924-6bd070ba-89f2-4cf9-8dcb-6e4be6ae40fd.png">
+    
+ **Note**: Do not forget to open ports 9000 and 5432 on the security group.
+ 
+ ### Step 3.6: Configure SonarQube and Jenkins for Quality Gate
+- Install SonarQube plugin in Jenkins UI
+- Navigate to Manage Jenkins > Configure System and add a SonarQube server
+  - In the name field, enter **sonarqube**
+  - For server URL, enter the IP of your SonarQube instance
+- Generate authentication tokens to use in the Jenkins UI
+  - In SonarQube UI, navigate to User > My Account > Security > Generate tokens
+  - Type in the name of the token and click Generate
+
+- Configure SonarQube webhook for Jenkins
+  -  Navigate to Administration > Configuration > Webhooks > Create
+  - Enter the name
+  - Enter URL as http://jenkins-server-ip:8080/sonar-webhook/
+
+![configure_sonarqube_in_jenkins](https://user-images.githubusercontent.com/23315232/132856625-81dc4958-372c-4850-a7b8-a4068180ea2b.jpg)
+
+- Setup SonarScanner for Jenkins
+  - In Jenkins UI, go to Manage Jenkins > Global Tool Configuration
+  - Look for SonarQube Scanner
+  - Click 'Add SonarQube Scanner' and enter the scanner name as 'SonarQubeScanner'
+  - Check the 'Install automatically' box
+  - Select 'Install from Maven Central'
+  
+  ![configure_Sonar)_Scanner_Ansible](https://user-images.githubusercontent.com/23315232/132856815-1666b023-406b-4905-b559-fa4d3c136d0f.jpg)
+
+-  Save and run the pipeline to install the scanner. An error will be generated but it will also create "/var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/conf/sonar-scanner.properties" directory
+
+- Edit sonar-scanner.properties file
+  ```
+  sudo vim /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/conf/sonar-scanner.properties
+  ```
+  Paste in the following lines:
+  ```
+  sonar.host.url=http://<SonarQube-Server-IP-address>:9000
+  sonar.projectKey=php-todo
+  #----- Default source code encoding
+  sonar.sourceEncoding=UTF-8
+  sonar.php.exclusions=**/vendor/**
+  sonar.php.coverage.reportPaths=build/logs/clover.xml
+  sonar.php.tests.reportPath=build/logs/junit.xml
+  ```
+  
+  - To further examine the configuration of the scanner tool on the Jenkins server - navigate into the tools directory
+```
+cd /var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/SonarQubeScanner/bin. 
+```
+- List the content to see the scanner tool *sonar-scanner* with command "ls -latr". That is what we are calling in the pipeline script.
+
+<img width="858" alt="listing_content_of_sonarScanner_bin_directory_showing_the_file_ran_in_the_jenkins_pipeline" src="https://user-images.githubusercontent.com/23315232/132856975-85250216-d0b4-4c49-9fef-bf67fd23e3be.png">
+
+- - Add the following build stage for Quality Gate
+  ```
+  stage('SonarQube Quality Gate') {
+      environment {
+            scannerHome = tool 'SonarQubeScanner'
+        }
+        steps {
+            withSonarQubeEnv('sonarqube') {
+                sh "${scannerHome}/bin/sonar-scanner"
+            }
+
+        }
+    }
+  ```
+  
+  - After running the pipeline, the output is shwown below:
+ 
+ <img width="937" alt="successfully_built_main_branch_after_adding_sonarqube_gate_for_todo_repo" src="https://user-images.githubusercontent.com/23315232/132857534-03b85b90-f780-4a9c-af0d-a0ed8ad63fd9.png">
+ 
+- Also on the sonarqube UI, the   

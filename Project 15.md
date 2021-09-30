@@ -6,4 +6,11 @@
 - Reverse proxy technology with Nginx has been selected with the aim to improve security and performance.
 - Cost, reliability and scalability are the major considerations for the company, to make the infrastructure resilient to server failures, accomodate increased traffic     and have reasonable cost.
 
-Infrastructure
+Infrastructure:
+
+![project-15-infrastructure IMG](https://user-images.githubusercontent.com/23315232/135461812-e94e31b1-526b-4950-b82a-e910ee53773c.png)
+
+Credits: Darey.io
+
+### Initial setup
+- Create a subaccount in AWS to manage all resources for the company's AWS solution

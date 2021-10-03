@@ -46,8 +46,8 @@ Credits: Darey.io
   -  Nginx servers: To allow access to from external application load balancer to the Nginx server
   -  Bastion servers: Access to the Bastion servers should be allowed only from workstations that need to SSH into the bastion servers. 
   -  External Load Balancer: The external application load balancer will be accessible from the internet
-  -  Internal load balancerL The internal load balancer will allow https and http access from the  Nginx server
-  -  Web servers: The webservers will allow https and http access from the internal load balancer and ssh access from the bastion server
+  -  Internal load balancer: The internal load balancer will allow https and http access from the  Nginx server and SSH access from the bastion server
+  -  Web servers: The webservers will allow https and http access from the internal load balancer and SSH access from the bastion server
   -  
   <img width="900" alt="security_grp_rule_for_bastion_host" src="https://user-images.githubusercontent.com/23315232/135623670-bbbd20e3-944e-45e9-9054-05beef0349d2.png">
   

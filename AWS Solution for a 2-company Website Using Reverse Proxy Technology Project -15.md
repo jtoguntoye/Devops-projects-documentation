@@ -26,7 +26,7 @@ Credits: Darey.io
 
 ### Setup a Virtual Private Cloud on AWS
 - Create a VPC 
-- Create subnets (public and private subnets) as shown in the architecture
+- Create subnets (public and private subnets) as shown in the architecture. The subnets Ips are CIDR IPs. We can use utility sites like IPinfo.io to see the range of IP addresses associated with each subnet.
 
 <img width="772" alt="Public-subnet-in-two-AZs" src="https://user-images.githubusercontent.com/23315232/135610761-69a92e4b-af61-47f8-90fd-bc47c1928083.png">
 
@@ -48,12 +48,18 @@ Credits: Darey.io
   -  External Load Balancer: The external application load balancer will be accessible from the internet
   -  Internal load balancer: The internal load balancer will allow https and http access from the  Nginx server and SSH access from the bastion server
   -  Web servers: The webservers will allow https and http access from the internal load balancer and SSH access from the bastion server
-  -  
+  -  Data layer security group: The access to the data layer for the appliation (consisting of both the Amazon RDS storage and Amazon EFS as shown in the architecture), will consist of webserver access to the RDS storage and both webserver and Nginx access to the Amazon EFS file system.
+   
   <img width="900" alt="security_grp_rule_for_bastion_host" src="https://user-images.githubusercontent.com/23315232/135623670-bbbd20e3-944e-45e9-9054-05beef0349d2.png">
   
   <img width="904" alt="security_grp_rule_for_External_ALB" src="https://user-images.githubusercontent.com/23315232/135623681-1b0f9961-f807-4d6b-85d5-9b7a069ed7ff.png">
 
+### Create a SSL/TLS certificate using Amazon Certificate Manager (ACM) to be used by the external and internal Application Load balancers (ALB)
+- Create a wild card SSL/TLS certificate to be used when creating the external ALB. We want to ensure connection to the external ALB is secured and data sent over the internet is encrypted. Since the external ALB will listen for client requests to both the tooling webserver and the wordpress server, we'll create a wild card TLS certificate. Select DNS validation 
 
+<img width="927" alt="creating_public_wild-card-TLS_certificate_for_ALBs" src="https://user-images.githubusercontent.com/23315232/135927685-23d76672-0d20-4f98-8f00-2466294515cd.png">
+
+### Create Amazon EFS 
 
 
 

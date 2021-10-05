@@ -59,8 +59,16 @@ Credits: Darey.io
 
 <img width="927" alt="creating_public_wild-card-TLS_certificate_for_ALBs" src="https://user-images.githubusercontent.com/23315232/135927685-23d76672-0d20-4f98-8f00-2466294515cd.png">
 
-### Create Amazon EFS 
+### Create Amazon EFS
+- Create Amazon Elastic file System (EFS) to be used by the web servers for files storage. The mount targets to be specified fot the elastic file system will be the subnets for the webservers. Specifying the mount targets makes the EFS storage available to the webservers
 
+<img width="729" alt="creating-Amazon-EFS-for-the-wordpress-and-tooling-servers-to-access" src="https://user-images.githubusercontent.com/23315232/136053493-6a69cb91-1a77-42d1-8af7-fbbaa7d4e7bb.png">
+
+- Also, we specify access points on the EFS we created for the web servers. Amazon EFS access points are application-specific entry points into a shared file system. In this project, we create two access points on the EFS one for each web servers, each with its own root directory path specified.  Set the POSIX user and user group ID to root user and the root directory path to ```/wordpress``` and `/tooling` respectively.
+- The root directory creation permission is set to `0755` to allow read write permissions on the file system by the clients 
+
+
+<img width="726" alt="tooling-access-point-created on-EFS-for-the-tooling-webserver" src="https://user-images.githubusercontent.com/23315232/136055726-9aea4cd5-2fe9-4001-aa93-39d2ec6cf6ea.png">
 
 
 

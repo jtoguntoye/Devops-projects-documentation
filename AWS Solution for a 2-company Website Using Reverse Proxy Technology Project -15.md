@@ -70,6 +70,16 @@ Credits: Darey.io
 
 <img width="726" alt="tooling-access-point-created on-EFS-for-the-tooling-webserver" src="https://user-images.githubusercontent.com/23315232/136055726-9aea4cd5-2fe9-4001-aa93-39d2ec6cf6ea.png">
 
+### Create KMS key to be used for RDS
+- Next, navigate to AWS KMS page to create a cryptographic key to be used to secure the MySQL relational database for the project.
+- Create a symmetric key
+- Set the admin user for the key. You can leave the 'key usage permission' with the default settings
+
+<img width="663" alt="creating-symmetric-key-for-encrypting-and-decrypting-the-DB" src="https://user-images.githubusercontent.com/23315232/136060813-6fcb5b53-6283-49ce-b20f-e7815bbfdac2.png">
+
+
+<img width="916" alt="kms-key" src="https://user-images.githubusercontent.com/23315232/136060837-c38d6b07-5311-4ff2-aac0-e0e2677f0403.png">
+
 
 
 

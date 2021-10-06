@@ -100,8 +100,8 @@ Credits: Darey.io
 
 ### Create compute resources
 
-#### Setup compute resources for Nginx
-- provision EC2 isntances for Nginx
+  #### Setup compute resources for Nginx
+  - provision EC2 instance for Nginx
   - Install the following packages
     ```
     epel-release
@@ -113,3 +113,103 @@ Credits: Darey.io
     wget
     telnet
     ```
+  - We also need to install a self signed SSL certificate on the Nginx AMI. The Nginx AMI will be attached to a target group that uses HTTPs protocol and health           checks. The load balancer establishes TLS connections with the targets using certificates that you install on the targets 
+  - Nginx instance installations:
+
+  ```
+  yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+  yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+  yum install wget vim python3 telnet htop git mysql net-tools chrony -y
+  systemctl start chronyd
+  systemctl enable chronyd
+  
+  #configure SELinux policies
+  setsebool -P httpd_can_network_connect=1
+  setsebool -P httpd_can_network_connect_db=1
+  setsebool -P httpd_execmem=1
+  setsebool -P httpd_use_nfs 1
+  
+  #install Amazon efs client utils
+  git clone https://github.com/aws/efs-utils
+  cd efs-utils
+  yum install -y make
+  yum install -y rpm-build
+  make rpm 
+  yum install -y  ./build/amazon-efs-utils*rpm
+  
+  #setup self-signed certificate for the Nginx AMI
+  sudo mkdir /etc/ssl/private
+  sudo chmod 700 /etc/ssl/private
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/ACS.key -out /etc/ssl/certs/ACS.crt
+  sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  ```
+  - We perform the above installations on the EC2 instance for the AMI step by step instead of adding them all to the launch template's user data, to reduce to size of 
+    the user data
+    
+  - Create an AMI from the instance
+  - Prepare a launch template from the AMI instance
+  - From EC2 Console, click Launch Templates from the left pane
+    - Choose the Nginx AMI
+    - Select the instance type (t2.micro)
+    - Select the key pair
+    - Select the security group
+    - Add resource tags
+    - Click Advanced details, scroll down to the end and configure the user data script to update the yum repo and install nginx. The userdata for Ngin
+   
+   ```
+   #!/bin/bash
+   yum install -y nginx
+   systemctl start nginx
+   systemctl enable nginx
+   git clone https://github.com/Livingstone95/ACS-project-config.git
+   mv /ACS-project-config/reverse.conf /etc/nginx/
+   mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf-distro
+   cd /etc/nginx/
+   touch nginx.conf
+   sed -n 'w nginx.conf' reverse.conf
+   systemctl restart nginx
+   rm -rf reverse.conf
+   rm -rf /ACS-project-config
+   ```
+
+#### Setup compute resources for Bastion server
+- Provision EC2 instance for Bastion server
+- Bastion instance installations:
+
+```
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm 
+yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm 
+yum install wget vim python3 telnet htop git mysql net-tools chrony -y
+systemctl start chronyd
+systemctl enable chronyd
+```
+
+### Setup compute resources for web server
+- Provision EC2 instance for web servers
+- Web server installations:
+```
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+yum install -y dnf-utils http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+yum install wget vim python3 telnet htop git mysql net-tools chrony -y
+systemctl start chronyd
+systemctl enable chronyd
+ 
+#configure SELinux policies
+setsebool -P httpd_can_network_connect=1
+setsebool -P httpd_can_network_connect_db=1
+setsebool -P httpd_execmem=1
+setsebool -P httpd_use_nfs 1
+
+#install Amaxzon EFS client utils for mounting the targets on the EFS
+git clone https://github.com/aws/efs-utils
+cd efs-utils
+yum install -y make
+yum install -y rpm-build
+make rpm 
+yum install -y  ./build/amazon-efs-utils*rpm
+
+#setup self-signed certificate for apache server
+yum install -y mod_ssl
+openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/ACS.key -x509 -days 365 -out /etc/pki/tls/certs/ACS.crt
+vi /etc/httpd/conf.d/ssl.conf
+```

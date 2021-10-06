@@ -80,6 +80,36 @@ Credits: Darey.io
 
 <img width="916" alt="kms-key" src="https://user-images.githubusercontent.com/23315232/136060837-c38d6b07-5311-4ff2-aac0-e0e2677f0403.png">
 
+### Create DB subnet group
+- A DB subnet group is a collection of subnets (typically private) that you create for a VPC and that you then designate for your DB instances.
+- From project architecture, specify the appropriate private subnets (private subnet 3 and 4) for the DB.  
 
+<img width="926" alt="creating_subnet_group_for_RDS" src="https://user-images.githubusercontent.com/23315232/136171766-9b721acb-e079-4c9b-be83-027927f1d935.png">
 
+### Create AWS RDS
+- Select MySQL engine for the RDS
+- Select Dev/Test template. This is an expensive service. For this purpose of this project we can still use free tier template, however we will not be able to encrypt the database using the KMS key we created.
+-  set the DB name
+-  Set master username and password
+-  Select the VPC for the DB
+-  Ensure the DB is not publicly accessible
+-  Select the appropriate security group for the DB
+-  set the inital database name 
 
+<img width="896" alt="creating_DB" src="https://user-images.githubusercontent.com/23315232/136179589-e7f82a18-39f6-4e42-ba60-ac0b64eeb74a.png">
+
+### Create compute resources
+
+#### Setup compute resources for Nginx
+- provision EC2 isntances for Nginx
+  - Install the following packages
+    ```
+    epel-release
+    python
+    htop
+    ntp
+    net-tools
+    vim
+    wget
+    telnet
+    ```

@@ -64,7 +64,7 @@ Credits: Darey.io
 
 <img width="729" alt="creating-Amazon-EFS-for-the-wordpress-and-tooling-servers-to-access" src="https://user-images.githubusercontent.com/23315232/136053493-6a69cb91-1a77-42d1-8af7-fbbaa7d4e7bb.png">
 
-- Also, we specify access points on the EFS we created for the web servers. Amazon EFS access points are application-specific entry points into a shared file system. In this project, we create two access points on the EFS one for each web servers, each with its own root directory path specified.  Set the POSIX user and user group ID to root user and the root directory path to ```/wordpress``` and `/tooling` respectively.
+- Also, we specify access points on the EFS we created for the web servers. Amazon EFS access points are application-specific entry points into a shared file system.     In this project, we create two access points on the EFS one for each web servers, each with its own root directory path specified.  Set the POSIX user and user group   ID to root user and the root directory path to ```/wordpress``` and `/tooling` respectively.
 - The root directory creation permission is set to `0755` to allow read write permissions on the file system by the clients 
 
 
@@ -140,8 +140,14 @@ Credits: Darey.io
   #setup self-signed certificate for the Nginx AMI
   sudo mkdir /etc/ssl/private
   sudo chmod 700 /etc/ssl/private
-  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/ACS.key -out /etc/ssl/certs/ACS.crt
+  openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/kiff.key -out /etc/ssl/certs/kiff.crt
   sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+  ```
+  - We will reference the SSL key and cert in the Nginx `Reverse.conf` configuration file. Also we will specify host headers in the config file to forward traffic to
+    the tooling server. 
+    
+  Nginx reverse.conf file
+  ```
   ```
   - We perform the above installations on the EC2 instance for the AMI step by step instead of adding them all to the launch template's user data, to reduce to size of 
     the user data
@@ -163,7 +169,7 @@ Credits: Darey.io
    yum install -y nginx
    systemctl start nginx
    systemctl enable nginx
-   git clone https://github.com/Livingstone95/ACS-project-config.git
+   git clone https://github.com/joeloguntoyeACS-project-config.git
    mv /ACS-project-config/reverse.conf /etc/nginx/
    mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf-distro
    cd /etc/nginx/
@@ -185,6 +191,20 @@ yum install wget vim python3 telnet htop git mysql net-tools chrony -y
 systemctl start chronyd
 systemctl enable chronyd
 ```
+
+### Connect to the RDS from the Bastion server and create DBs named toolingdb and wordpressdb for the two webservers
+- SSH into the RDS instance 
+```
+eval `ssh-agent`
+ssh-add project-key.pem
+ssh -A ec2-user@ip_address
+mysql -h <RDS_endpoint> -u <username> -p 
+>>create database wordpressdb;
+>>create database toolingdb;
+```
+
+
+<img width="256" alt="creating_databases_on_RDS_using_bastion_server_to_access_RDS" src="https://user-images.githubusercontent.com/23315232/136358127-61ad4208-6064-43a4-baf8-0ba570925577.png">
 
 ### Setup compute resources for web server
 - Provision EC2 instance for web servers
@@ -214,11 +234,11 @@ yum install -y  ./build/amazon-efs-utils*rpm
 yum install -y mod_ssl
 openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/kiff-web.key -x509 -days 365 -out /etc/pki/tls/certs/kiff-web.crt
 
-# edit the ssl.cong file to specify the part to the certificate and the key
+# edit the ssl.conf file to specify the part to the certificate and the key
 vi /etc/httpd/conf.d/ssl.conf
 ```
 - Create an AMI from the instance 
-- We will create two launch templates from this AMI, one each for the wordpress server and the tooling server. The launch templates will differ in the user data for     each server
+- We will create two launch templates from this AMI, one each for the wordpress server and the tooling server. The launch templates will differ in the user data for     each server. The launch tmeplate 
 -  Configure user data for the worpress launch template:
 ```
 #!/bin/bash
@@ -241,14 +261,36 @@ cp -R /wordpress/* /var/www/html/
 cd /var/www/html/
 touch healthstatus
 sed -i "s/localhost/kiff-database.cdqtynjthv7.eu-west-3.rds.amazonaws.com/g" wp-config.php 
-sed -i "s/username_here/ACSadmin/g" wp-config.php 
+sed -i "s/username_here/Kiffadmin/g" wp-config.php 
 sed -i "s/password_here/admin12345/g" wp-config.php 
 sed -i "s/database_name_here/wordpressdb/g" wp-config.php 
 chcon -t httpd_sys_rw_content_t /var/www/html/ -R
 systemctl restart httpd
 ```
 - Configure user data for tooling launch template:
+
 ```
+#!/bin/bash
+mkdir /var/www/
+sudo mount -t efs -o tls,accesspoint=fsap-01c13a4019ca59dbe fs-8b501d3f:/ /var/www/
+yum install -y httpd 
+systemctl start httpd
+systemctl enable httpd
+yum module reset php -y
+yum module enable php:remi-7.4 -y
+yum install -y php php-common php-mbstring php-opcache php-intl php-xml php-gd php-curl php-mysqlnd php-fpm php-json
+systemctl start php-fpm
+systemctl enable php-fpm
+git clone https://github.com/Livingstone95/tooling-1.git
+mkdir /var/www/html
+cp -R /tooling-1/html/*  /var/www/html/
+cd /tooling-1
+mysql -h kiff-db.cdqpbjkethv0.us-east-1.rds.amazonaws.com -u kiffAdmin -p toolingdb < tooling-db.sql
+cd /var/www/html/
+touch healthstatus
+sed -i "s/$db = mysqli_connect('mysql.tooling.svc.cluster.local', 'admin', 'admin', 'tooling');/$db = mysqli_connect('kiff-db.cdqpbjkethv0.us-east-1.rds.amazonaws.com ', 'kiffAdmin', 'admin12345', 'toolingdb');/g" functions.php
+chcon -t httpd_sys_rw_content_t /var/www/html/ -R
+systemctl restart httpd
 ```
 <img width="555" alt="configuring_user_Data_for_bastion_launch_template" src="https://user-images.githubusercontent.com/23315232/136201972-5e10fd0d-5990-4f4e-b0c8-4d984d443f54.png">
 
@@ -271,8 +313,68 @@ Target group IMG:
   - select the security group for the internal load balancer
   -  set path for healthchecks as `/healthstatus`
   - Register the wordpress target group as the default target for the internal load balancer
-  - Configure a listener rule to allow the internal load balancer forward  traffic to the tooling target group based on the rule set\
+  - Configure a listener rule to allow the internal load balancer forward  traffic to the tooling target group based on the rule set.
+  - Since we'll configure host header in our Nginx reverse proxy server, we will specify the listener rule on the ALB to forward traffic to the tooling target if the       host header is the domain name : `tooling.kiff-web.space` 
   
   <img width="958" alt="creating_ext_and_int_load_balancers_with_listener_rule_set_for_internal_lb" src="https://user-images.githubusercontent.com/23315232/136204901-af0c598d-3c5b-4c36-8a42-b2c50df52cad.png">
   
+  
   <img width="863" alt="configuring_listener_rule_for_internal_LB" src="https://user-images.githubusercontent.com/23315232/136206252-03c29298-7b2d-44a6-92a0-546cd6e7bc35.png">
+
+### Create Autoscaling groups for the launch templates (Bastion, Nginx, tooling and wordpress servers)
+- Configure Autoscaling for Nginx
+  - Select the right launch template
+  - Select the VPC
+  - Select both public subnets
+  - Enable Application Load Balancer for the AutoScalingGroup (ASG)
+  - Select the Nginx target you created before
+  - Ensure that you have health checks for both EC2 and ALB
+  - The desired capacity is 2
+  - Minimum capacity is 2
+  - Maximum capacity is 4
+  - Set scale out if CPU utilization reaches 90%
+  - Ensure there is an SNS topic to send scaling notifications 
+  
+- Configure Autoscaling For Bastion
+  - Select the right launch template
+  - Select the VPC
+  - Select both public subnets
+  - Select No load balancer for bastion Autoscaling group, since the Bastion server is not targeted by any load balancer  
+  - Set scale out if CPU utilization reaches 90%
+  - Enable health checks
+  - The desired capacity is 2
+  - Set Minimum capacity to 2
+  - Maximum capacity to 4
+  - Ensure there is an SNS topic to send scaling notifications
+  
+  <img width="895" alt="creating_bastion_AG_review" src="https://user-images.githubusercontent.com/23315232/136360585-a1791039-81ef-498d-8b70-c49d853fad72.png">
+ 
+ - Configure Autoscaling group for tooling and wordpress webserver 
+  - Select the right launch template
+  - Select the VPC
+  - Select both private subnets  1 and 2
+  - Enable Application Load Balancer for the AutoScalingGroup (ASG)
+  - Select the target groups you created before
+  - Ensure that you have health checks for both EC2 and ALB
+  - The desired capacity is 2
+  - Minimum capacity is 2
+  - Maximum capacity is 4
+  - Set scale out if CPU utilization reaches 90%
+  - Ensure there is an SNS topic to send scaling notifications
+  
+  
+### Create A Records in the Route 53 hosted zone
+- create A record for tooling and wordpress 
+  - set record type to 'A-Routes to a IPV4 address' 
+  - Set Route Traffic to 'Alias to application load balancer and classic load balancer'
+  - Set the load balancer
+  
+  <img width="707" alt="adding_A_record_to_DNS" src="https://user-images.githubusercontent.com/23315232/136365772-dda6ce29-d45f-4d26-8c18-7f9edbdc1a5d.png">
+  
+  
+  
+  Healthchecks status for wordpress targets:
+ 
+  <img width="703" alt="showing_health_checks_for_ALB_targets" src="https://user-images.githubusercontent.com/23315232/136360518-f891e40b-c4d4-4f52-9ef1-566faf9a745a.png">
+
+  

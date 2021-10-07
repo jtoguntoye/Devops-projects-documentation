@@ -143,11 +143,71 @@ Credits: Darey.io
   openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/kiff.key -out /etc/ssl/certs/kiff.crt
   sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
   ```
-  - We will reference the SSL key and cert in the Nginx `Reverse.conf` configuration file. Also we will specify host headers in the config file to forward traffic to
+  - We will reference the SSL key and cert in the Nginx `Reverse.conf` configuration file. Also we will specify host header in the config file to forward traffic to
     the tooling server. 
     
   Nginx reverse.conf file
   ```
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+# Load dynamic modules. See /usr/share/doc/nginx/README.dynamic.
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    sendfile            on;
+    tcp_nopush          on;
+    tcp_nodelay         on;
+    keepalive_timeout   65;
+    types_hash_max_size 2048;
+
+    
+    default_type        application/octet-stream;
+
+    # Load modular configuration files from the /etc/nginx/conf.d directory.
+    # See http://nginx.org/en/docs/ngx_core_module.html#include
+    # for more information.
+    include /etc/nginx/conf.d/*.conf;
+
+     server {
+        listen       80;
+        listen       443 http2 ssl;
+        listen       [::]:443 http2 ssl;
+        root          /var/www/html;
+        server_name  *.kiff-web.space;
+        
+        
+        ssl_certificate /etc/ssl/certs/kiff.crt;
+        ssl_certificate_key /etc/ssl/private/kiff.key;
+        ssl_dhparam /etc/ssl/certs/dhparam.pem;
+
+      
+
+        location /healthstatus {
+        access_log off;
+        return 200;
+       }
+    
+         
+        location / {
+            proxy_set_header             Host $host;
+            proxy_pass                   https://internal-Kiff-internal-ALB-1756005909.eu-west-3.elb.amazonaws.com/; 
+           }
+    }
+}
+
   ```
   - We perform the above installations on the EC2 instance for the AMI step by step instead of adding them all to the launch template's user data, to reduce to size of 
     the user data
@@ -222,7 +282,7 @@ setsebool -P httpd_can_network_connect_db=1
 setsebool -P httpd_execmem=1
 setsebool -P httpd_use_nfs 1
 
-#install Amaxzon EFS client utils for mounting the targets on the EFS
+#install Amazon EFS client utils for mounting the targets on the EFS
 git clone https://github.com/aws/efs-utils
 cd efs-utils
 yum install -y make
@@ -316,9 +376,10 @@ Target group IMG:
   - Configure a listener rule to allow the internal load balancer forward  traffic to the tooling target group based on the rule set.
   - Since we'll configure host header in our Nginx reverse proxy server, we will specify the listener rule on the ALB to forward traffic to the tooling target if the       host header is the domain name : `tooling.kiff-web.space` 
   
+  
   <img width="958" alt="creating_ext_and_int_load_balancers_with_listener_rule_set_for_internal_lb" src="https://user-images.githubusercontent.com/23315232/136204901-af0c598d-3c5b-4c36-8a42-b2c50df52cad.png">
   
-  
+   
   <img width="863" alt="configuring_listener_rule_for_internal_LB" src="https://user-images.githubusercontent.com/23315232/136206252-03c29298-7b2d-44a6-92a0-546cd6e7bc35.png">
 
 ### Create Autoscaling groups for the launch templates (Bastion, Nginx, tooling and wordpress servers)

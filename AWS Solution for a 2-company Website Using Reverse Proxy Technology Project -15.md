@@ -425,6 +425,7 @@ Target group IMG:
   
   
 ### Create A Records in the Route 53 hosted zone
+- We need to ensure that the main domain for the WordPress website can be reached, and the subdomain for Tooling website can also be reached using a browser.
 - create A record for tooling and wordpress 
   - set record type to 'A-Routes to a IPV4 address' 
   - Set Route Traffic to 'Alias to application load balancer and classic load balancer'

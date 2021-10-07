@@ -377,4 +377,8 @@ Target group IMG:
  
   <img width="703" alt="showing_health_checks_for_ALB_targets" src="https://user-images.githubusercontent.com/23315232/136360518-f891e40b-c4d4-4f52-9ef1-566faf9a745a.png">
 
+  Accessing the tooling and wordpress servers:
   
+  <img width="923" alt="wordpress_server_page_loaded" src="https://user-images.githubusercontent.com/23315232/136368278-574940c3-dd33-4a36-ac25-4ebd26356ab0.png">
+  
+

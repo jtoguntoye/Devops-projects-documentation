@@ -147,6 +147,8 @@ Credits: Darey.io
     the user data
     
   - Create an AMI from the instance
+  - Create a Nginx target group of Instance type. Targets in the Nginx target groups will be accessed by the external Load balancer. 
+     
   - Prepare a launch template from the AMI instance
   - From EC2 Console, click Launch Templates from the left pane
     - Choose the Nginx AMI
@@ -154,7 +156,7 @@ Credits: Darey.io
     - Select the key pair
     - Select the security group
     - Add resource tags
-    - Click Advanced details, scroll down to the end and configure the user data script to update the yum repo and install nginx. The userdata for Ngin
+    - Click Advanced details, scroll down to the end and configure the user data script to update the yum repo and install nginx. The userdata for Nginx:
    
    ```
    #!/bin/bash
@@ -210,6 +212,67 @@ yum install -y  ./build/amazon-efs-utils*rpm
 
 #setup self-signed certificate for apache server
 yum install -y mod_ssl
-openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/ACS.key -x509 -days 365 -out /etc/pki/tls/certs/ACS.crt
+openssl req -newkey rsa:2048 -nodes -keyout /etc/pki/tls/private/kiff-web.key -x509 -days 365 -out /etc/pki/tls/certs/kiff-web.crt
+
+# edit the ssl.cong file to specify the part to the certificate and the key
 vi /etc/httpd/conf.d/ssl.conf
 ```
+- Create an AMI from the instance 
+- We will create two launch templates from this AMI, one each for the wordpress server and the tooling server. The launch templates will differ in the user data for     each server
+-  Configure user data for the worpress launch template:
+```
+#!/bin/bash
+mkdir /var/www/
+sudo mount -t efs -o tls,accesspoint=fsap-0f9364679383ffbc0 fs-8b501d3f:/ /var/www/
+yum install -y httpd 
+systemctl start httpd
+systemctl enable httpd
+yum module reset php -y
+yum module enable php:remi-7.4 -y
+yum install -y php php-common php-mbstring php-opcache php-intl php-xml php-gd php-curl php-mysqlnd php-fpm php-json
+systemctl start php-fpm
+systemctl enable php-fpm
+wget http://wordpress.org/latest.tar.gz
+tar xzvf latest.tar.gz
+rm -rf latest.tar.gz
+cp wordpress/wp-config-sample.php wordpress/wp-config.php
+mkdir /var/www/html/
+cp -R /wordpress/* /var/www/html/
+cd /var/www/html/
+touch healthstatus
+sed -i "s/localhost/kiff-database.cdqtynjthv7.eu-west-3.rds.amazonaws.com/g" wp-config.php 
+sed -i "s/username_here/ACSadmin/g" wp-config.php 
+sed -i "s/password_here/admin12345/g" wp-config.php 
+sed -i "s/database_name_here/wordpressdb/g" wp-config.php 
+chcon -t httpd_sys_rw_content_t /var/www/html/ -R
+systemctl restart httpd
+```
+- Configure user data for tooling launch template:
+```
+```
+<img width="555" alt="configuring_user_Data_for_bastion_launch_template" src="https://user-images.githubusercontent.com/23315232/136201972-5e10fd0d-5990-4f4e-b0c8-4d984d443f54.png">
+
+Target group IMG:
+
+<img width="940" alt="creating_target_groups_for_nginx_tooling_and_wordpress_servers_to_be_Targeted_by_ALBs" src="https://user-images.githubusercontent.com/23315232/136201615-859a95a3-d5b5-47ab-8e57-2cacaeff62f5.png">
+
+### Create load balancers (the external load balancer and the internal load balancer)
+
+- Create external load balancer. 
+  - Assign  at least two public subnets
+  - set protocol as HTTPs on port 443
+  - Register the Nginx target group for the external load balancer
+  - select the security group for the external load balancer
+  - set path for healthchecks as `/healthstatus`
+  
+- Create the internal load balancer
+  - Assign at least two private subnets
+  - set protocol as HTTPs on port 443
+  - select the security group for the internal load balancer
+  -  set path for healthchecks as `/healthstatus`
+  - Register the wordpress target group as the default target for the internal load balancer
+  - Configure a listener rule to allow the internal load balancer forward  traffic to the tooling target group based on the rule set\
+  
+  <img width="958" alt="creating_ext_and_int_load_balancers_with_listener_rule_set_for_internal_lb" src="https://user-images.githubusercontent.com/23315232/136204901-af0c598d-3c5b-4c36-8a42-b2c50df52cad.png">
+  
+  <img width="863" alt="configuring_listener_rule_for_internal_LB" src="https://user-images.githubusercontent.com/23315232/136206252-03c29298-7b2d-44a6-92a0-546cd6e7bc35.png">

@@ -381,4 +381,11 @@ Target group IMG:
   
   <img width="923" alt="wordpress_server_page_loaded" src="https://user-images.githubusercontent.com/23315232/136368278-574940c3-dd33-4a36-ac25-4ebd26356ab0.png">
   
+  <img width="957" alt="tooling_server_page_loaded_with_tooling_A_Record" src="https://user-images.githubusercontent.com/23315232/136368256-11275608-cf0a-4f00-a2b4-59201379089c.png">
+  
+  
+Note:
+- Ensure that SELinux policies are properly configured on the server instances.
+- Ensure you delete all the resources you created to avoid accumulating charges. 
+  
 

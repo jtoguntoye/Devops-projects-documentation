@@ -39,7 +39,33 @@ User created using the admin user with access key created for the user:
 
 ## Create VPC, Subnets with Terraform HCL
 - In VScode create a new directory, and create a new file named `main.tf`
-- 
+- Setup Terraform CLI following this [instruction](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+- Add AWS as a provider, and a resource to create a VPC in the main.tf file.
+- Provider block informs Terraform that we intend to build infrastructure within AWS.
+- Resource block will create a VPC.
 
+```
+provider "aws" {
+region = "eu-west-3"
+}
+# create VPC
+resource "aws_vpc" "main" {
+cidr_block = "172.16.0.0/16"
+enable_dns_hostnames = true
+enable_dns_support = true
+enable_classiclink = false
+enable_classiclink_dns_support = false
+}
+```
+- Next, download the required plugins for Terraform to work using the `Terraform init` command. These plugins are used by providers and provisioners
 
+<img width="701" alt="initializing_Terraform_and_installing_providers" src="https://user-images.githubusercontent.com/23315232/138319130-31ed31c0-a296-40aa-8cc2-a43e9df1b0c5.png">
+
+- Next, run `Terraform plan` to preview the changes that Terraform will make
+- Next, apply the changes using `Terraform apply`
+
+<img width="663" alt="previewing_changes_that_will_be_made_with_terraform_plan_command" src="https://user-images.githubusercontent.com/23315232/138319911-58c25311-ab8b-4fcc-b351-1894a6ef1afd.png">
+
+Observation:
+A new file is created `terraform.tfstate`. This is how Terraform keeps itself up to date with the exact state of the infrastructure. It reads this file to know what already exists, what should be added, or destroyed based on the entire terraform code that is being developed.
  

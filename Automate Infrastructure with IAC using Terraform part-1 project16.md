@@ -37,7 +37,9 @@ User created using the admin user with access key created for the user:
 - Apply: Apply the changes Terraform will make 
 
 
-
+## Create VPC, Subnets with Terraform HCL
+- In VScode create a new directory, and create a new file named `main.tf`
+- 
 
 
  

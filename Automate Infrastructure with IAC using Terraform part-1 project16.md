@@ -144,7 +144,7 @@ A new file is created `terraform.tfstate`. This is how Terraform keeps itself up
  ```
  
  ### Fixing multiple resource blocks
- - We fix the multiple resource blocks creating public subnets using Terraform's **Data Sources**. Data sources enable us to fetch information outside if Terraform. In this case, AWS
+ - We fix the multiple resource blocks creating public subnets using Terraform's **Data Sources**. Data sources enable us to fetch information outside of Terraform, in this case, AWS
  ```
  # Get list of available zones from a region
  data "aws_available_zones" "available" {
@@ -157,8 +157,101 @@ A new file is created `terraform.tfstate`. This is how Terraform keeps itself up
     vpc_id = aws_vpc.main.id
     cidr_block = "172.16.1.0/24"
     map_public_ip_on_launch = true
-    availability_zone = data.aws_Availability_zone.available[count.index]
- 
- 
+    availability_zone = data.aws_Availability_zone.available.names[count.index]
  }
  ```
+### Make cidr_block dynamic
+- Use Terraform's `cidrsubnet()` function to dynamically create cidr_block for the subnets. 
+- The `cidrsubnet(prefix, newbits, netnum)` function takes three parameters. 
+    - prefix must be given in CIDR notation
+    - newbits is the number of additional bits with which to extend the prefix. For example, if given a prefix ending in /16 and a newbits value of 4, the resulting          subnet address will have length /20.
+    - netnum is a whole number that can be represented as a binary integer with no more than newbits binary digits, which will be used to populate the additional            bits added to the prefix
+
+```
+resource "aws_subnet" "public" {
+   count = 2
+   vpc_id = aws_vpc.main.id
+   cidr_block = cidrsubnet(var.vpc_cidr, 4, count.index)
+   map_public_ip_on_launch = true
+   availability_zone       = data.aws_availability_zones.available.names[count.index]
+
+}
+```
+### Remove hardcoded count value 
+- We can remove hardcoded count value by calling the `length()` function on the `aws_availability_zone` data source.
+- Also to ensure we only create 2 public subnets, we create a variable for the `preferred_number_of_subnets` to be created
+
+```
+variable "preferred_number_of_public_subnets" {
+  default = 2
+}
+
+resource "aws_subnet" "public" {
+     count = var.preferred_number_of_public_subnets == null ? length(data.availability_zones_available.names): var.preferred_number_of_public_subnets
+     vpc_id = aws_vpc.main.id
+     cidr_block = cidrsubnet(var.vpc_cidr, 4, count.index)
+     map_public_ip_on_launch = true
+     availability_zone       = data.aws_availability_zones.available.names[count.index]
+}
+ 
+```
+
+### Introducing variable.tf and terraform.tfvars file
+- Instead of havng a long list of variables in main.tf file, we can actually make our code a lot more readable and better structured by moving out some parts of the configuration content to other files.
+- Create a new file and name it `variables.tf` . This file is used to define the variable type and optionally set default value
+- Create a `terraform.tfvars` file to set the actual values of the variables
+
+**variables.tf** file
+```
+ # create region variable
+    variable "region" {
+        default =  "eu-west-3"
+    }
+    variable "vpc_cidr" {
+        default = "172.16.0.0/16"
+    }
+    variable "enable_dns_support" {
+        default = "true"
+    }
+
+    variable "enable_dns_hostnames" {
+        default ="true" 
+    }
+
+    variable "enable_classiclink" {
+        default = "false"
+    }
+
+    variable "enable_classiclink_dns_support" {
+        default = "false"
+    }
+
+    variable "preferred_number_of_public_subnets" {
+        default = "null"
+    }
+  ```
+    
+ 
+ **terraform.tfvars** file
+ 
+ ```
+ region = "eu-west-3"
+
+vpc_cidr = "172.16.0.0/16"
+
+enable_classiclink = "false"
+
+enable_classiclink_dns_support = "false"
+
+enable_dns_hostnames = "true"
+
+enable_dns_support = "true"
+
+preferred_number_of_public_subnets = 2
+ ```
+ 
+- Current Project file structure
+
+- <img width="151" alt="directory structure_after_creating_variables_file" src="https://user-images.githubusercontent.com/23315232/138355753-bff5d5ad-8ee3-401e-a870-448c43218f8c.png">
+
+- In project 17, the other reosurces in the AWS infrastructure will be provisioned using Terraform HCL

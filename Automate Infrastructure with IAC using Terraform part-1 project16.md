@@ -29,7 +29,12 @@ User created using the admin user with access key created for the user:
 <img width="403" alt="listing_s3_bucjets_using_AWS_CLI" src="https://user-images.githubusercontent.com/23315232/138314120-a202c7d0-2a7e-4e46-88b3-3e51d16d086c.png">
 
 
-
+## General steps to using Terraform
+- Scope: Identify the infrastructure for your project
+- Author: Write the configuration to define your infrastructure
+- Initialize: Install the required Terraform Providers
+- Plan: Preview the changes Terraform will make
+- Apply: Apply the changes Terraform will make 
 
 
 

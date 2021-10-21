@@ -46,15 +46,15 @@ User created using the admin user with access key created for the user:
 
 ```
 provider "aws" {
-region = "eu-west-3"
+    region = "eu-west-3"
 }
 # create VPC
 resource "aws_vpc" "main" {
-cidr_block = "172.16.0.0/16"
-enable_dns_hostnames = true
-enable_dns_support = true
-enable_classiclink = false
-enable_classiclink_dns_support = false
+     cidr_block = "172.16.0.0/16"
+     enable_dns_hostnames = true
+     enable_dns_support = true
+     enable_classiclink = false
+    enable_classiclink_dns_support = false
 }
 ```
 - Next, download the required plugins for Terraform to work using the `Terraform init` command. These plugins are used by providers and provisioners
@@ -69,3 +69,96 @@ enable_classiclink_dns_support = false
 Observation:
 A new file is created `terraform.tfstate`. This is how Terraform keeps itself up to date with the exact state of the infrastructure. It reads this file to know what already exists, what should be added, or destroyed based on the entire terraform code that is being developed.
  
+ ## Creating subnet resources
+ - According to our Architectural design we require 6 subnets:
+     - 2 public subnets
+     - 2 private subnets for webservers
+     - 2 private subnets for datalayer
+     
+ - Add the following block of code to the `main.tf` file
+ ```
+ # create public subnets
+ resource "aws_subnet" "public1" {
+      vpc_id = aws_vpc.main.id
+      cidr_block = "172.16.0.0/24"
+      map_public_ip_on_launch = true
+      availability_zone = "eu-west-3a"
+ }
+ 
+ resource "aws_subnet" "public2" {
+      vpc_id = aws_vpc.main.id
+      cidr_block = "172.16.1.0/24"
+      map_public_ip_on_launch = true
+      availability_zone = "eu-west-3b"
+ }
+ ```
+- Next, run `terraform plan` and `terraform apply` to apply the changes 
+### Observation
+- Hardcoded values were used for cidr_block and availability_zone arguments. This is not recommended
+- Also, multiple resource blocks were used to create the public subnets. We need to create a single resource block that can dynamically create resources without specifying multiple blocks
+
+## Refactoring Code:
+ 
+ ### Fixing hardcoded values
+ 
+ - We create variables for the arguments in the `main.tf` file as shown below:
+ 
+ ```
+ variable "region" {
+     default = "eu-west-3"
+ }
+ 
+ provider "aws" {
+        region = var.region
+    }
+    
+ variable "vpc_cidr" {
+        default = "172.16.0.0/16"
+    }
+    variable "enable_dns_support" {
+        default = "true"
+    }
+
+    variable "enable_dns_hostnames" {
+        default ="true" 
+    }
+
+    variable "enable_classiclink" {
+        default = "false"
+    }
+
+    variable "enable_classiclink_dns_support" {
+        default = "false"
+    }
+    
+    
+     # Create VPC
+    resource "aws_vpc" "main" {
+    cidr_block                     = var.vpc_cidr
+    enable_dns_support             = var.enable_dns_support 
+    enable_dns_hostnames           = var.enable_dns_support
+    enable_classiclink             = var.enable_classiclink
+    enable_classiclink_dns_support = var.enable_classiclink
+
+    }
+ ```
+ 
+ ### Fixing multiple resource blocks
+ - We fix the multiple resource blocks creating public subnets using Terraform's **Data Sources**. Data sources enable us to fetch information outside if Terraform. In this case, AWS
+ ```
+ # Get list of available zones from a region
+ data "aws_available_zones" "available" {
+    state = "available"      
+ }
+ 
+ # make use of the data source to create subnets
+ resource "aws_subnet" "public" {
+    count = 2
+    vpc_id = aws_vpc.main.id
+    cidr_block = "172.16.1.0/24"
+    map_public_ip_on_launch = true
+    availability_zone = data.aws_Availability_zone.available[count.index]
+ 
+ 
+ }
+ ```

@@ -122,6 +122,7 @@ resource "aws_nat_gateway" "nat" {
 }
 ```
 ## Create AWS Routes
+- Create a new file named `route-tables.tf`
 - Create public and private route tables and associate the appropriate public and private subnets respectively. Also, the internet gateway created earlier is 
 specified for the public route to allow access from the internet for subnets in the public route table
 - The NAT gateway defined earlier is attached to the private route table to allow the webservers forward traffic to the internet.
@@ -189,5 +190,85 @@ resource "aws_route_table_association" "public-subnets-assoc" {
 
 ```
 
+## AWS Identity and Access Management
+- We want to pass IAM Role to EC2 instances to give them access to some specific resources.
+
+- First create `AssumeRole`. AssumeRole in AWS using Security Token Service (STS) API returns a set of temporary security credentials that you can use to 
+access AWS resources. These temporary credentials consist of an access key ID, a secret access key, and a security token. Typically, you use AssumeRole within your account or for cross-account access
+- Create a new file named `roles.tf` to define the IAM role for EC2  instances to assume.
+```
+# create Iam role to be used by EC2-instance
+resource "aws_iam_role" "ec2_instance_role" {
+  name = "ec2_instance_role"
+  assume_role_policy = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+              Sid = ""
+              Action = "sts:AssumeRole"
+              Effect = "Allow"
+              Principal = {
+                  Service = "ec2.amazonaws.com"
+              }
+        },
+      ]
+  })
+
+  tags = merge (
+      var.tags,
+      {
+          Name = "aws assume role"
+      }
+  )
+}
+
+```
+- The `aws_iam_role` created above includes an `assume_role_policy`. This policy specifies which entity can assume the role we defined.
+
+- Next create IAM policy for this role. The Iam Policy specifies what an entity is allowed to do when its assumes this role.
+
+```
+resource "aws_iam_policy" "policy" {
+  name        = "ec2_instance_policy"
+  description = "A test policy"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "ec2:Describe*",
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+
+  })
+
+  tags = merge(
+    var.tags,
+    {
+      Name =  "aws assume policy"
+    },
+  )
+
+}
+```
+- Next attach the Iam policy to the IAM role
+```
+# attach the iam_policy to the iam role 
+resource "aws_iam_role_policy_attachment" "test_attach" {
+    role = aws_iam_role.ec2_instance_role.name
+    policy_arn = aws_iam_policy.policy.arn
+}
+```
+- Next, create an instance profile.  We Use an instance profile to pass an IAM role to an EC2 instance
+```
+#create an instance profile to pass an iam role to an ec2 instance
+resource "aws_iam_instance_profile" "instProfile" {
+    name = "aws_instance_profile_test"
+    role = aws_iam_role.ec2_instance_role.name
+}
+```
 
   

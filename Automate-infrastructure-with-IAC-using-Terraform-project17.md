@@ -1252,12 +1252,18 @@ Maximum IP address = 172.16.255.255
 
 - OSI model: The OSI (Open Systems Interconnection) Model is a reference network for how applications should communicate over a network. It is a conceptual tool to help developers and network teams pinpoint and troubleshoot the cause of network problem and describe the functions of a network or intercommunication system. 
 The OSI model represents the communication between two endpoints into seven layers: 
-        - Application layer 
-        - Presentation layer
-        - Session layer
-        - Transport layer
-        - Network layer
-        - Datalink layer
-        - Physical layer
+  - Application layer 
+  - Presentation layer
+  - Session layer
+  - Transport layer
+  - Network layer
+  - Datalink layer
+  - Physical layer
   
-- The TCP/IP model: The TCP/IP (Transmission Control Protocol/Internet Protocol) 
+- The TCP/IP model: The TCP/IP (Transmission Control Protocol/Internet Protocol)  also called the Internet protocol suite is similar to the OSI model but is simpler and more compatible with TCP/IP. It is the set of communication protocols used on the internet and similar computer networks. It consists of 4 layers: 
+    - Application layer
+    - Transport layer
+    - Internet layer 
+    - Link layer
+
+- AssumeRole policy Vs role policy: AssumeRole policy defines which services or user can assume a role using AWS STS service, while role policy defines what the user or service can do while assuming that role.  

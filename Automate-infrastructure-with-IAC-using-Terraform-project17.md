@@ -1230,3 +1230,34 @@ resource "aws_db_instance" "kiff-rds" {
 ```
 
 - Run `terraform plan` command to view the changes that will be made by terraform . Then apply the changes using `terraform apply --auto-approve`  
+
+
+### Definitions:
+
+-  IP Address: A unique address that identifies a device on the internet or within a private network. IP stands for internet protocol and refers to the set of rules
+governing the format used to send data over the internet or private network
+-  Subnets: Subnets are logical partitions of a network into multiple, smaller networks. Similar to spiltting up a range of postal codes into individual ones, we can split an IP range into smaller networks or subnets.
+- CIDR notation - CIDR stands for Classless Inter-Domain Routing. CIDR notation is a way to represent a range of IP addresses. CIDR notations were developed to 
+resolve the problems associated with the old ways of IP addressing (Class-A, B and C), that exhausted the availability of IP addresses.CIDR IP addresses are composed of two set of numbers- The network address (e.9 10.10.0.0), and the suffix (/16) which specifies the number of bits in the entire address.
+e.g of CIDR notation: 172.16.0.0/16 - 
+network address - 172.16.0.0
+subnet mask - 16
+The CIDR notation above indicates that 16 bits are reserved for network addressing, while the remaining 16-bits are  available for the individual devices or hosts within the network
+Minimum IP address - 172.16.0.0
+Maximum IP address = 172.16.255.255
+
+- IP Routing: IP routing refers to the process of sending packets of data from a host on one network to another host on a different remote network
+- Internet Gateway: An internet gateway is a router that you can attach to a private network to allow communication between the private network and the internet
+- NAT gateway: A NAT (Network Address Translation) Gateway gives cloud resources within a private network access to the internet without allowing incoming connection to the resources in that network from the internet
+
+- OSI model: The OSI (Open Systems Interconnection) Model is a reference network for how applications should communicate over a network. It is a conceptual tool to help developers and network teams pinpoint and troubleshoot the cause of network problem and describe the functions of a network or intercommunication system. 
+The OSI model represents the communication between two endpoints into seven layers: 
+        - Application layer 
+        - Presentation layer
+        - Session layer
+        - Transport layer
+        - Network layer
+        - Datalink layer
+        - Physical layer
+  
+- The TCP/IP model: The TCP/IP (Transmission Control Protocol/Internet Protocol) 

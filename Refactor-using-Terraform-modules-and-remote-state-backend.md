@@ -1394,4 +1394,346 @@ module "security" {
   vpc_id = module.networking.vpc_id
 }
 ```
+### Auto scaling group
+
+- Create a folder named `autoscaling group` and add three files - `main.tf`, `variables.tf`, and `outputs.tf`
+- Move autoscaling group into the main.tf file in the autoscaling folder.
+- Add outputs in the outputs.tf file. We'll be referencing these outputs in the root main.tf file.
+
+#### main.tf
+```
+# create sns topic for all the autoscaling groups
+resource "aws_sns_topic" "kiff-sns" {
+  name = "Default_CloudWatch_Alarms_Topic"
+}
+
+# create notification for all the autoscaling groups
+resource "aws_autoscaling_notification" "kiff-notification" {
+  group_names = [
+      aws_autoscaling_group.bastion-asg.name,
+      aws_autoscaling_group.nginx-asg.name,
+      aws_autoscaling_group.wordpress-asg.name,
+      aws_autoscaling_group.tooling-asg.name,
+  ]
+  notifications = [
+      "autoscaling:EC2_INSTANCE_LAUNCH",
+      "autoscaling:EC2_INSTANCE_TERMINATE",
+      "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+      "autoscaling:EC2_INSTANCE_TERMINATE_ERROR",
+  ]
+
+  topic_arn = aws_sns_topic.kiff-sns.arn
+}
+
+
+
+resource "random_shuffle" "az_list" {
+  input = var.available_zone_names
+}
+
+#--- Autoscaling for bastion hosts
+resource "aws_autoscaling_group" "bastion-asg" {
+   name = "bastion-asg"
+   max_size = 2
+   min_size = 1
+   health_check_grace_period = 300
+   health_check_type = "ELB"
+   desired_capacity = 1
+
+   vpc_zone_identifier = [
+      var.public_subnet1_id,
+       var.public_subnet2_id
+   ]
+
+   launch_template {
+     id = var.bastion_launch_template_id
+     version = "$Latest"
+   }
+   tag {
+       key = "Name"
+       value = "bastion-launch-template"
+       propagate_at_launch = true
+   }
+}
+
+
+
+
+# create autoscaling group for nginx
+resource "aws_autoscaling_group" "nginx-asg" {
+    name = "nginx-asg"
+    max_size = 2
+    min_size = 1
+    health_check_type = "ELB"
+    health_check_grace_period = 300
+    desired_capacity = 1
+
+    vpc_zone_identifier = [
+        var.public_subnet1_id,
+        var.public_subnet2_id
+    ]
+
+    launch_template {
+      id = var.nginx_launch_template_id
+      version = "$Latest"
+    }
+
+    tag {
+      key = "Name"
+      value = "nginx-launch-template"
+      propagate_at_launch = true
+    } 
+
+}
+
+
+# attach the autoscaling group of nginx to external load balancer
+resource "aws_autoscaling_attachment" "asg_attachment_nginx" {
+    autoscaling_group_name = aws_autoscaling_group.nginx-asg.id
+    alb_target_group_arn = var.nginx_tgt_arn
+}
+
+
+
+
+# --- Autoscaling for wordpress application
+resource "aws_autoscaling_group" "wordpress-asg" {
+    name = "Wordpress-asg"
+    max_size = 2
+    min_size = 1
+    health_check_grace_period = 300
+    health_check_type = "ELB"
+    desired_capacity = 1
+    vpc_zone_identifier = [
+       var.private_subnet1_id,
+        var.private_subnet2_id
+    ]
+
+    launch_template {
+      id = var.wordpress_launch_template_id
+      version = "$Latest"
+    }
+
+    tag{
+        key = "Name"
+        value = "wordpress-asg"
+        propagate_at_launch = true
+    }
+  
+}
+
+# attach wordpress autoscaling group to the internal load balancer
+resource "aws_autoscaling_attachment" "asg-attachment-wordpress" {
+   autoscaling_group_name = aws_autoscaling_group.wordpress-asg.id
+   alb_target_group_arn = var.wordpress_tgt_arn
+  
+}
+
+
+# create autoscaling group for tooling webserver
+resource "aws_autoscaling_group" "tooling-asg" {
+   name = "tooling-asg"
+   max_size = 2
+   min_size = 1
+   health_check_grace_period = 300
+   health_check_type = "ELB"
+   desired_capacity = 1
+
+   vpc_zone_identifier = [
+       var.private_subnet1_id,
+       var.private_subnet2_id
+   ]
+
+   launch_template {
+     id = var.tooling_launch_template_id
+     version = "$Latest"
+   }
+
+   tag { 
+       key = "Name"
+       value = "tooling-launch-template"
+       propagate_at_launch = true
+   }  
+}
+
+# attaching tooling autoscaling group to the internal load balancer
+resource "aws_autoscaling_attachment" "asg-attachment-tooling" {
+    autoscaling_group_name = aws_autoscaling_group.tooling-asg.id
+    alb_target_group_arn = var.tooling_tgt_arn  
+}
+```
+
+#### variables.tf
+```
+variable "available_zone_names" {}
+
+variable "bastion_launch_template_id" {}
+
+variable "nginx_launch_template_id" {}
+
+
+variable "wordpress_launch_template_id" {}
+
+variable "tooling_launch_template_id" {}
+variable "public_subnet2_id" {}
+
+variable "public_subnet1_id" {}
+
+variable "private_subnet1_id" {}
+variable "private_subnet2_id" {}
+
+
+variable "nginx_tgt_arn" {}
+
+variable "wordpress_tgt_arn" {}
+
+variable "tooling_tgt_arn" {}
+```
+-  Next, call the autoscaling module from the root module
+
+#### root main.tf
+```
+module "autoscaling" {
+    source = "./modules/autoscaling"
+    available_zone_names = module.vpc.availability_zones
+    bastion_launch_template_id = module.compute.bastion_launch_template
+    nginx_launch_template_id = module.compute.nginx_launch_template
+    wordpress_launch_template_id = module.compute.wordpress_launch_template
+    tooling_launch_template_id = module.compute.tooling_launch_template
+    public_subnet1_id = module.vpc.public_subnet1-id
+    public_subnet2_id = module.vpc.public_subnet2-id
+    private_subnet1_id = module.vpc.private_subnet1-id  
+    private_subnet2_id = module.vpc.private_subnet2-id
+    nginx_tgt_arn = module.alb.nginx_tgt_arn
+    tooling_tgt_arn = module.alb.tooling_tgt_arn
+    wordpress_tgt_arn = module.alb.wordpress_tgt_arn
+}
+```
+
+- Next add the following code to the root module `variables.tf` file
+```
+    # create region variable
+    variable "region" {
+        default =  "eu-west-3"
+    }
+    variable "vpc_cidr" {
+        default = "172.16.0.0/16"
+    }
+    variable "enable_dns_support" {
+        default = "true"
+    }
+
+    variable "enable_dns_hostnames" {
+        default ="true" 
+    }
+
+    variable "enable_classiclink" {
+        default = "false"
+    }
+
+    variable "enable_classiclink_dns_support" {
+        default = "false"
+    }
+
+    variable "preferred_number_of_public_subnets" {
+        default = "null"
+    }
+
+    variable "preferred_number_of_private_subnets" {
+      default = "null"
+    }
+
+    variable "tags" {
+      description = "A mapping of tags to assign to all resources"
+      type = map(string)
+      default = {}
+      
+    }
+
+    variable "vpc_name" {
+      default = "vpc_name"
+    }
+
+    variable "public_subnet_tag" {
+      default = ""
+    }
+
+    variable "eip_name" {
+    }
+
+    variable "nat_gw" {  
+    }
+
+    variable "private-rtb-name" {
+    }
+
+    variable "public-rtb-name" {
+    }
+
+    variable "ext-alb-sg-name" {
+        type = string
+    }
+
+    variable "ami" {
+  type        = string
+  description = "AMI ID for the launch template"
+  }
+  
+  variable "images" {
+      type = map(string)
+      default = {
+          eu-west-3 = ""
+      }
+    
+  }
+  variable "keypair" {
+    type = string
+    description  = "keypair for the instances"
+
+  }
+
+  variable "account_no" {
+      type = string
+      description = "AWS account number"
+    
+  }
+
+  variable master_username {
+      type = string
+      description = "kiff-db master username"
+  }
+
+  variable master_password {
+      type = string
+      description = "kiff-db master password"
+  } 
+```
+- Add the following outputs to the root module's `outputs.tf` file
+
+```
+output "s3_bucket_arn" {
+    value = aws_s3_bucket.terraform_state.arn
+    description = "The arn for the S3 bucket"
+}
+
+output "dyanmodb_table_arn" {
+    value = aws_dynamodb_table.terraform-locks.arn
+    description = "The arn for the dynamodb table"
+}
+
+output "alb_dns_name" {
+  value = module.alb.alb_dns_name
+}
+
+output "alb_target_group_arn" {
+  value = module.alb.alb_target_group_arn
+}
+```
+
+- Also, define a `terraform.tfvars` file to keep variables values and secret values.
+
+- Run `terraform plan` to preview the changes that will be made to the infrastructure
+
+<img width="647" alt="terraform_plan_result_After_refactoring_with_modules" src="https://user-images.githubusercontent.com/23315232/141654054-bbd3fc0c-251b-45e1-a50b-da2cdf3e86f2.png">
+- Then apply the changes using `terraform apply`. 
 

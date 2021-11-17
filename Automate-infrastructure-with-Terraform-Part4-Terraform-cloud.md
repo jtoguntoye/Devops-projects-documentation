@@ -30,7 +30,8 @@
   - Set two environment variables: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.  These credentials will be used to privision your AWS infrastructure by Terraform Cloud
   
   <img width="902" alt="adding_Sensitive_environment_variables_to_terraform_cloud" src="https://user-images.githubusercontent.com/23315232/142169270-ae180417-67a7-4b25-9554-15d4b1aaff97.png">
-  #### Note: You need to also configure variables defined in the variables.tf file of your code repo either as a Terraform variable in Terraform cloud or in a `*.auto.tfvars` file. 
+  
+  #### Note: You need to also configure variables defined in the variables.tf file of your code repo either as a Terraform variable in Terraform cloud or in a `.auto.tfvars` file in your repo. 
   
 - Run `terraform plan` and `terraform apply` from web console
   - Switch to "Runs" tab and click on "Queue plan manualy" button. If planning has been successfull, you can proceed and confirm Apply – press "Confirm and apply",         provide a comment and "Confirm plan"
@@ -133,4 +134,14 @@ output "website_endpoint" {
 }
 ```
 - Create a workspace for your configuration
--In Terraform Cloud, create a new workspace and choose your GitHub connection.
+- In Terraform Cloud, create a new workspace and choose your GitHub connection.
+- You will need to add the three Terraform variables prefix, region, and name. These variables correspond to the variables.tf file in your root module configuration     and are necessary to create a unique S3 bucket name for your webapp. Add your AWS credentials as two environment variables, AWS_ACCESS_KEY_ID and           AWS_SECRET_ACCESS_KEY and mark them as sensitive.
+
+<img width="874" alt="input_variables_for_the_private_module" src="https://user-images.githubusercontent.com/23315232/142181889-6e4a95ee-14e4-4fb6-970c-ae1905128979.png">
+- Deploy the infrastructure. Test your deployment by queuing a plan in your Terraform Cloud UI.
+
+<img width="865" alt="creating_s3_bucket_using_root_module" src="https://user-images.githubusercontent.com/23315232/142181634-70d81f12-6ac9-432a-9594-0333e4e84325.png">
+
+- The private module deploys a website in s3 bucket:
+
+<img width="873" alt="loading_website_hosted_on_s3_bucket" src="https://user-images.githubusercontent.com/23315232/142181615-9bbb55d2-4a5d-4c37-b8d6-38169dc9e19d.png">

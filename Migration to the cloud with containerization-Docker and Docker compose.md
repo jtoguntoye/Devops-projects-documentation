@@ -306,5 +306,17 @@ volumes:
  ```
  
   The "Test endpoint" stage uses httpRequest to check if the app can be reached after running `docker-compose up -d`
+  
+  - A post stage to always clean up the server and delete images on the Jenkins server
+  ```
+  post 
+  {
+    always {
+      sh "docker-compose down"
+      sh "docker system prune -af"
+      sh 'docker logout'
+    }
+  }
+  ```
  
  

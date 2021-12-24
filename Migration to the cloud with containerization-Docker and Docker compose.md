@@ -313,10 +313,11 @@ volumes:
   {
     always {
       sh "docker-compose down"
-      sh "docker system prune -af"
-      sh 'docker logout'
+     sh "docker rmi joeltosin/todo-app:${env.BRANCH_NAME}-${env.BUILD_NUMBER}"'
     }
   }
   ```
+  
+  <img width="920" alt="pipeline_with_push_todockerhub" src="https://user-images.githubusercontent.com/23315232/147316891-ebe39c54-30ef-4d58-90cb-711398fdd9e6.png">
  
  

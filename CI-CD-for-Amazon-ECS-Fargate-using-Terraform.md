@@ -37,8 +37,47 @@ To ensure temporary credentials are not already in place we remove the existing 
 ```
 rm -vf ${HOME}/.aws/credentials
 ```
-### validate the IAM role
+#### validate the IAM role
 - Use the GetCallerIdentity  CLI command to validate that the Cloud9 IDE is using the correct IAM role
 ```
 aws sts get-caller-identity --query Arn | grep workshop-admin -q && echo "IAM role valid" || echo "IAM role NOT valid"
 ```
+
+### Setup 
+- Install Terraform and other utilities needed
+```
+cd ~/environment
+wget https://releases.hashicorp.com/terraform/0.12.26/terraform_0.12.26_linux_amd64.zip
+unzip terraform_0.12.26_linux_amd64.zip
+```
+
+- Install in /usr/local/bin
+```
+sudo mv terraform /usr/local/bin
+```
+- Install text utilities
+```
+sudo yum -y install jq gettext
+```
+- Configure AWS CLI with current region as the default region
+```
+export AWS_REGION=$(curl -s 169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region)
+echo "export AWS_REGION=${AWS_REGION}" >> ~/.bash_profile
+aws configure set default.region ${AWS_REGION}
+aws configure get default.region
+```
+- Setup environment variable for Account ID
+```
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo "export AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" >> ~/.bash_profile
+```
+
+- Next, download workshop resources needed to setup the lab
+```
+wget https://github.com/aws-samples/aws-ecs-cicd-terraform/archive/master.zip
+unzip master.zip
+cd aws-ecs-cicd-terraform-master
+```
+
+### Build Infrastructure
+- In this section, you will use terraform to build the infrastructure for the workshop, including: SSM Parameter Store, an ECS cluster, an RDS database, and an AWS CodePipeline.

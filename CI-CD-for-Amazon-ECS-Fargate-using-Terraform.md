@@ -26,3 +26,19 @@ By default, Cloud9 manages temporary IAM credentials for you. This works well in
 
 - To work around this, you need to disable Cloud9 managed temporary credentials, and instead assign an IAM role with Administrator privileges to your Cloud9 EC2 instance. 
 Note: If you are connecting to AWS from your local CLI, you need to setup credentials for the user using the CLI commands. See instructions [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html)
+
+- Assign the Admin IAM role created to the EC2 instance for the cloud9 environment
+
+- Disable AWS managed temporary IAM credentials for your cloud9 workspace
+
+![turn_off_aws_managed_credentials](https://user-images.githubusercontent.com/23315232/185485196-cfa88533-090b-48d8-95a5-39496278ca79.png)
+
+To ensure temporary credentials are not already in place we remove the existing credentials file
+```
+rm -vf ${HOME}/.aws/credentials
+```
+### validate the IAM role
+- Use the GetCallerIdentity  CLI command to validate that the Cloud9 IDE is using the correct IAM role
+```
+aws sts get-caller-identity --query Arn | grep workshop-admin -q && echo "IAM role valid" || echo "IAM role NOT valid"
+```
